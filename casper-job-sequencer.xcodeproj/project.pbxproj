@@ -1,0 +1,741 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		47EF3FDC248A44A20094608D /* activity.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47EF3FD8248A44A20094608D /* activity.cc */; };
+		47EF3FE1248A49200094608D /* sequence.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47EF3FE0248A49200094608D /* sequence.cc */; };
+		47F37F7F2484FADB00493361 /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47F37F7E2484FADB00493361 /* main.cc */; };
+		47F37F882484FC5500493361 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 47F37F872484FC5500493361 /* Makefile */; };
+		47F37FDD2484FE5300493361 /* libbeanstalk-client.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FB92484FDEF00493361 /* libbeanstalk-client.a */; };
+		47F37FDE2484FE5300493361 /* libcasper-connectors-v8.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FA02484FD8C00493361 /* libcasper-connectors-v8.a */; };
+		47F37FDF2484FE5300493361 /* libcasper-osal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FB22484FDC500493361 /* libcasper-osal.a */; };
+		47F37FE02484FE5300493361 /* libhiredis.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FBF2484FE0300493361 /* libhiredis.a */; };
+		47F37FE12484FE5300493361 /* libjsoncpp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FD12484FE2B00493361 /* libjsoncpp.a */; };
+		47F37FEB2484FF7800493361 /* sequencer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47F37FEA2484FF7800493361 /* sequencer.cc */; };
+		47F37FF6248501C700493361 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FF5248501C700493361 /* Security.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		47F37F9D2484FD8C00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 476EF7CA1E23EC91004A13C2;
+			remoteInfo = "casper-connectors";
+		};
+		47F37F9F2484FD8C00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47E9FA8822300AE80043E8DF;
+			remoteInfo = "casper-connectors-v8";
+		};
+		47F37FA12484FD8C00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47DDAD162452EFF20056D703;
+			remoteInfo = "casper-connectors-icu";
+		};
+		47F37FB12484FDC500493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47CB40021E23EE58004FE268;
+			remoteInfo = "casper-osal";
+		};
+		47F37FB82484FDEF00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FB42484FDEF00493361 /* beanstalk-client.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47018FBA1EC07FC50011E06D;
+			remoteInfo = "beanstalk-client";
+		};
+		47F37FBE2484FE0300493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FBA2484FE0300493361 /* hiredis.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47DADA551D95297E002A7C53;
+			remoteInfo = hiredis;
+		};
+		47F37FD02484FE2B00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FCC2484FE2B00493361 /* jsoncpp.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A5598FF619C305F700490EBE;
+			remoteInfo = jsoncpp;
+		};
+		47F37FD22484FE3A00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FCC2484FE2B00493361 /* jsoncpp.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = A5598FF519C305F700490EBE;
+			remoteInfo = jsoncpp;
+		};
+		47F37FD42484FE3A00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FBA2484FE0300493361 /* hiredis.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 47DADA541D95297E002A7C53;
+			remoteInfo = hiredis;
+		};
+		47F37FD62484FE3A00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FB42484FDEF00493361 /* beanstalk-client.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 47018FB91EC07FC50011E06D;
+			remoteInfo = "beanstalk-client";
+		};
+		47F37FD82484FE3A00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 47CB40011E23EE58004FE268;
+			remoteInfo = "casper-osal";
+		};
+		47F37FDA2484FE3A00493361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 47E9FA0C22300AE80043E8DF;
+			remoteInfo = "casper-connectors-v8";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		47F37F702484FAB600493361 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		47EF3FD8248A44A20094608D /* activity.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = activity.cc; sourceTree = "<group>"; };
+		47EF3FD9248A44A20094608D /* activity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = activity.h; sourceTree = "<group>"; };
+		47EF3FDD248A46850094608D /* status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
+		47EF3FDF248A48C30094608D /* sequence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence.h; sourceTree = "<group>"; };
+		47EF3FE0248A49200094608D /* sequence.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sequence.cc; sourceTree = "<group>"; };
+		47F37F722484FAB600493361 /* casper-job-sequencer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "casper-job-sequencer"; sourceTree = BUILT_PRODUCTS_DIR; };
+		47F37F7C2484FADB00493361 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		47F37F7E2484FADB00493361 /* main.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cc; sourceTree = "<group>"; };
+		47F37F862484FB0700493361 /* version.tpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = version.tpl.h; sourceTree = "<group>"; };
+		47F37F872484FC5500493361 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		47F37F892484FCE800493361 /* version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
+		47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "casper-connectors.xcodeproj"; path = "connectors/casper-connectors.xcodeproj"; sourceTree = "<group>"; };
+		47F37FAA2484FDBB00493361 /* common.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = common.xcconfig; sourceTree = "<group>"; };
+		47F37FAB2484FDBB00493361 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
+		47F37FAC2484FDBB00493361 /* release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = "<group>"; };
+		47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "casper-osal.xcodeproj"; path = "casper-osal/casper-osal.xcodeproj"; sourceTree = "<group>"; };
+		47F37FB42484FDEF00493361 /* beanstalk-client.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "beanstalk-client.xcodeproj"; path = "beanstalk-client/beanstalk-client.xcodeproj"; sourceTree = "<group>"; };
+		47F37FBA2484FE0300493361 /* hiredis.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = hiredis.xcodeproj; path = hiredis/hiredis.xcodeproj; sourceTree = "<group>"; };
+		47F37FCC2484FE2B00493361 /* jsoncpp.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = jsoncpp.xcodeproj; path = jsoncpp/jsoncpp.xcodeproj; sourceTree = "<group>"; };
+		47F37FEA2484FF7800493361 /* sequencer.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sequencer.cc; sourceTree = "<group>"; };
+		47F37FEC2484FFA000493361 /* sequencer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequencer.h; sourceTree = "<group>"; };
+		47F37FF5248501C700493361 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		47F37F6F2484FAB600493361 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47F37FF6248501C700493361 /* Security.framework in Frameworks */,
+				47F37FDE2484FE5300493361 /* libcasper-connectors-v8.a in Frameworks */,
+				47F37FDF2484FE5300493361 /* libcasper-osal.a in Frameworks */,
+				47F37FDD2484FE5300493361 /* libbeanstalk-client.a in Frameworks */,
+				47F37FE02484FE5300493361 /* libhiredis.a in Frameworks */,
+				47F37FE12484FE5300493361 /* libjsoncpp.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		47EF3FD7248A44A20094608D /* sequencer */ = {
+			isa = PBXGroup;
+			children = (
+				47EF3FDD248A46850094608D /* status.h */,
+				47EF3FDF248A48C30094608D /* sequence.h */,
+				47EF3FE0248A49200094608D /* sequence.cc */,
+				47EF3FD9248A44A20094608D /* activity.h */,
+				47EF3FD8248A44A20094608D /* activity.cc */,
+			);
+			path = sequencer;
+			sourceTree = "<group>";
+		};
+		47F37F692484FAB600493361 = {
+			isa = PBXGroup;
+			children = (
+				47F37FB32484FDCB00493361 /* third-party */,
+				47F37F962484FD6100493361 /* casper-party */,
+				47F37F872484FC5500493361 /* Makefile */,
+				47F37F7C2484FADB00493361 /* LICENSE */,
+				47F37F7D2484FADB00493361 /* src */,
+				47F37F732484FAB600493361 /* Products */,
+				47F37FDC2484FE5300493361 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		47F37F732484FAB600493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37F722484FAB600493361 /* casper-job-sequencer */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37F7D2484FADB00493361 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				47F37F892484FCE800493361 /* version.h */,
+				47F37F862484FB0700493361 /* version.tpl.h */,
+				47F37FE82484FF7800493361 /* casper */,
+				47F37F7E2484FADB00493361 /* main.cc */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		47F37F962484FD6100493361 /* casper-party */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FA92484FDBB00493361 /* xcode */,
+				47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */,
+				47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */,
+			);
+			name = "casper-party";
+			path = "../casper-packager";
+			sourceTree = "<group>";
+		};
+		47F37F982484FD8C00493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37F9E2484FD8C00493361 /* libcasper-connectors.a */,
+				47F37FA02484FD8C00493361 /* libcasper-connectors-v8.a */,
+				47F37FA22484FD8C00493361 /* libcasper-connectors-icu.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37FA92484FDBB00493361 /* xcode */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FAA2484FDBB00493361 /* common.xcconfig */,
+				47F37FAB2484FDBB00493361 /* debug.xcconfig */,
+				47F37FAC2484FDBB00493361 /* release.xcconfig */,
+			);
+			path = xcode;
+			sourceTree = "<group>";
+		};
+		47F37FAE2484FDC500493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FB22484FDC500493361 /* libcasper-osal.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37FB32484FDCB00493361 /* third-party */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FCC2484FE2B00493361 /* jsoncpp.xcodeproj */,
+				47F37FBA2484FE0300493361 /* hiredis.xcodeproj */,
+				47F37FB42484FDEF00493361 /* beanstalk-client.xcodeproj */,
+			);
+			name = "third-party";
+			path = "../casper-packager";
+			sourceTree = "<group>";
+		};
+		47F37FB52484FDEF00493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FB92484FDEF00493361 /* libbeanstalk-client.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37FBB2484FE0300493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FBF2484FE0300493361 /* libhiredis.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37FCD2484FE2B00493361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FD12484FE2B00493361 /* libjsoncpp.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		47F37FDC2484FE5300493361 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FF5248501C700493361 /* Security.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		47F37FE82484FF7800493361 /* casper */ = {
+			isa = PBXGroup;
+			children = (
+				47F37FE92484FF7800493361 /* job */,
+			);
+			path = casper;
+			sourceTree = "<group>";
+		};
+		47F37FE92484FF7800493361 /* job */ = {
+			isa = PBXGroup;
+			children = (
+				47EF3FD7248A44A20094608D /* sequencer */,
+				47F37FEC2484FFA000493361 /* sequencer.h */,
+				47F37FEA2484FF7800493361 /* sequencer.cc */,
+			);
+			path = job;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		47F37F712484FAB600493361 /* casper-job-sequencer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 47F37F792484FAB600493361 /* Build configuration list for PBXNativeTarget "casper-job-sequencer" */;
+			buildPhases = (
+				47F37F6E2484FAB600493361 /* Sources */,
+				47F37F6F2484FAB600493361 /* Frameworks */,
+				47F37F702484FAB600493361 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				47F37FDB2484FE3A00493361 /* PBXTargetDependency */,
+				47F37FD92484FE3A00493361 /* PBXTargetDependency */,
+				47F37FD72484FE3A00493361 /* PBXTargetDependency */,
+				47F37FD52484FE3A00493361 /* PBXTargetDependency */,
+				47F37FD32484FE3A00493361 /* PBXTargetDependency */,
+			);
+			name = "casper-job-sequencer";
+			productName = "casper-job-sequencer";
+			productReference = 47F37F722484FAB600493361 /* casper-job-sequencer */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		47F37F6A2484FAB600493361 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1150;
+				ORGANIZATIONNAME = "Cloudware S.A.";
+				TargetAttributes = {
+					47F37F712484FAB600493361 = {
+						CreatedOnToolsVersion = 11.5;
+					};
+				};
+			};
+			buildConfigurationList = 47F37F6D2484FAB600493361 /* Build configuration list for PBXProject "casper-job-sequencer" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 47F37F692484FAB600493361;
+			productRefGroup = 47F37F732484FAB600493361 /* Products */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 47F37FB52484FDEF00493361 /* Products */;
+					ProjectRef = 47F37FB42484FDEF00493361 /* beanstalk-client.xcodeproj */;
+				},
+				{
+					ProductGroup = 47F37F982484FD8C00493361 /* Products */;
+					ProjectRef = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+				},
+				{
+					ProductGroup = 47F37FAE2484FDC500493361 /* Products */;
+					ProjectRef = 47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */;
+				},
+				{
+					ProductGroup = 47F37FBB2484FE0300493361 /* Products */;
+					ProjectRef = 47F37FBA2484FE0300493361 /* hiredis.xcodeproj */;
+				},
+				{
+					ProductGroup = 47F37FCD2484FE2B00493361 /* Products */;
+					ProjectRef = 47F37FCC2484FE2B00493361 /* jsoncpp.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				47F37F712484FAB600493361 /* casper-job-sequencer */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		47F37F9E2484FD8C00493361 /* libcasper-connectors.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-connectors.a";
+			remoteRef = 47F37F9D2484FD8C00493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FA02484FD8C00493361 /* libcasper-connectors-v8.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-connectors-v8.a";
+			remoteRef = 47F37F9F2484FD8C00493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FA22484FD8C00493361 /* libcasper-connectors-icu.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-connectors-icu.a";
+			remoteRef = 47F37FA12484FD8C00493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FB22484FDC500493361 /* libcasper-osal.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-osal.a";
+			remoteRef = 47F37FB12484FDC500493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FB92484FDEF00493361 /* libbeanstalk-client.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libbeanstalk-client.a";
+			remoteRef = 47F37FB82484FDEF00493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FBF2484FE0300493361 /* libhiredis.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libhiredis.a;
+			remoteRef = 47F37FBE2484FE0300493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47F37FD12484FE2B00493361 /* libjsoncpp.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libjsoncpp.a;
+			remoteRef = 47F37FD02484FE2B00493361 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXSourcesBuildPhase section */
+		47F37F6E2484FAB600493361 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47EF3FDC248A44A20094608D /* activity.cc in Sources */,
+				47EF3FE1248A49200094608D /* sequence.cc in Sources */,
+				47F37F882484FC5500493361 /* Makefile in Sources */,
+				47F37FEB2484FF7800493361 /* sequencer.cc in Sources */,
+				47F37F7F2484FADB00493361 /* main.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		47F37FD32484FE3A00493361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = jsoncpp;
+			targetProxy = 47F37FD22484FE3A00493361 /* PBXContainerItemProxy */;
+		};
+		47F37FD52484FE3A00493361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = hiredis;
+			targetProxy = 47F37FD42484FE3A00493361 /* PBXContainerItemProxy */;
+		};
+		47F37FD72484FE3A00493361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "beanstalk-client";
+			targetProxy = 47F37FD62484FE3A00493361 /* PBXContainerItemProxy */;
+		};
+		47F37FD92484FE3A00493361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "casper-osal";
+			targetProxy = 47F37FD82484FE3A00493361 /* PBXContainerItemProxy */;
+		};
+		47F37FDB2484FE3A00493361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "casper-connectors-v8";
+			targetProxy = 47F37FDA2484FE3A00493361 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		47F37F772484FAB600493361 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 47F37FAB2484FDBB00493361 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/include",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/include",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/include",
+					"$(SRCROOT)/../casper-packager/icu/darwin/pkg/$(CONFIGURATION)/icu/usr/local/casper/icu/include",
+					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/include",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/../casper-connectors/src",
+					"$(SRCROOT)/../casper-osal/src",
+					"$(SRCROOT)/../jsoncpp/dist",
+					"$(SRCROOT)/../hiredis",
+					"$(SRCROOT)/../",
+				);
+			};
+			name = Debug;
+		};
+		47F37F782484FAB600493361 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 47F37FAC2484FDBB00493361 /* release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "NDEBUG=1";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/include",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/include",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/include",
+					"$(SRCROOT)/../casper-packager/icu/darwin/pkg/$(CONFIGURATION)/icu/usr/local/casper/icu/include",
+					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/include",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/../casper-connectors/src",
+					"$(SRCROOT)/../casper-osal/src",
+					"$(SRCROOT)/../jsoncpp/dist",
+					"$(SRCROOT)/../hiredis",
+					"$(SRCROOT)/../",
+				);
+			};
+			name = Release;
+		};
+		47F37F7A2484FAB600493361 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 47F37FAB2484FDBB00493361 /* debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/include",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/include",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/include",
+					"$(SRCROOT)/../casper-packager/icu/darwin/pkg/$(CONFIGURATION)/icu/usr/local/casper/icu/include",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,",
+					"-Bstatic",
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/lib/libcurl.a",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/lib/libssl.a",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/lib/libcrypto.a",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent_pthreads.a",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent.a",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/lib/libpq.a",
+					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/lib/libz.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/../casper-connectors/src",
+					"$(SRCROOT)/../casper-osal/src",
+					"$(SRCROOT)/../v8/include",
+					"$(SRCROOT)/../v8/third_party/icu/source/common",
+					"$(SRCROOT)/../v8/third_party/icu/source/i18n",
+					"$(SRCROOT)/../jsoncpp/dist",
+					"$(SRCROOT)/../hiredis",
+					"$(SRCROOT)/../",
+				);
+				WARNING_CFLAGS = "-Wno-documentation";
+			};
+			name = Debug;
+		};
+		47F37F7B2484FAB600493361 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 47F37FAC2484FDBB00493361 /* release.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/include",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/include",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/include",
+					"$(SRCROOT)/../casper-packager/icu/darwin/pkg/$(CONFIGURATION)/icu/usr/local/casper/icu/include",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,",
+					"-Bstatic",
+					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/lib/libcurl.a",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/lib/libssl.a",
+					"$(SRCROOT)/../casper-packager/openssl/darwin/pkg/$(CONFIGURATION)/openssl/usr/local/casper/openssl/lib/libcrypto.a",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent_pthreads.a",
+					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent.a",
+					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/lib/libpq.a",
+					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/lib/libz.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
+					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/../casper-connectors/src",
+					"$(SRCROOT)/../casper-osal/src",
+					"$(SRCROOT)/../v8/include",
+					"$(SRCROOT)/../v8/third_party/icu/source/common",
+					"$(SRCROOT)/../v8/third_party/icu/source/i18n",
+					"$(SRCROOT)/../jsoncpp/dist",
+					"$(SRCROOT)/../hiredis",
+					"$(SRCROOT)/../",
+				);
+				WARNING_CFLAGS = "-Wno-documentation";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		47F37F6D2484FAB600493361 /* Build configuration list for PBXProject "casper-job-sequencer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				47F37F772484FAB600493361 /* Debug */,
+				47F37F782484FAB600493361 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		47F37F792484FAB600493361 /* Build configuration list for PBXNativeTarget "casper-job-sequencer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				47F37F7A2484FAB600493361 /* Debug */,
+				47F37F7B2484FAB600493361 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 47F37F6A2484FAB600493361 /* Project object */;
+}
