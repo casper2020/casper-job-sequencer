@@ -27,13 +27,16 @@
  * @param a_source One of \link Sequence::Source \link.
  * @param a_cid    CLUSTER id.
  * @param a_bjid   BEANSTALKD job id ( for logging proposes ).
+ * @param a_rsid   REDIS service id.
  * @param a_rjnr   REDIS job number.
  * @param a_rjid   REDIS job key.
  * @param a_rcid   REDIS job channel.
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
-                                            const uint64_t& a_cid, const int64_t& a_bjid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid)
-    : source_(a_source), cid_(a_cid), bjid_(a_bjid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid)
+                                            const uint64_t& a_cid, const int64_t& a_bjid,
+                                            const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid)
+    : source_(a_source), cid_(a_cid), bjid_(a_bjid),
+      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid)
 {
     /* empty */
 }
@@ -44,14 +47,17 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
  * @param a_source One of \link Sequence::Source \link.
  * @param a_cid    CLUSTER id.
  * @param a_bjid   BEANSTALKD job id ( for logging proposes ).
+ * @param a_rsid   REDIS service id.
  * @param a_rjnr   REDIS job number.
  * @param a_rjid   REDIS job key.
  * @param a_rcid   REDIS job channel.
- * @param a_djid   DB id ( form table js.sequence[id] as string ).
+ * @param a_djid   DB id ( form table js.sequences[id] as string ).
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
-                                            const uint64_t& a_cid, const int64_t& a_bjid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did)
-    : source_(a_source), cid_(a_cid), bjid_(a_bjid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid), did_(a_did)
+                                            const uint64_t& a_cid, const int64_t& a_bjid,
+                                            const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did)
+    : source_(a_source), cid_(a_cid), bjid_(a_bjid),
+      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid), did_(a_did)
 {
     /* empty */
 }
@@ -66,6 +72,7 @@ casper::job::sequencer::Sequence::Sequence (const casper::job::sequencer::Sequen
     source_ = a_sequence.source_;
     cid_    = a_sequence.cid_;
     bjid_   = a_sequence.bjid_;
+    rsid_   = a_sequence.rsid_;
     rjnr_   = a_sequence.rjnr_;
     rjid_   = a_sequence.rjid_;
     rcid_   = a_sequence.rcid_;

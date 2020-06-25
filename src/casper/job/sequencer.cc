@@ -59,6 +59,7 @@ casper::job::Sequencer::Sequencer (const ev::Loggable::Data& a_loggable_data, co
       thread_id_(cc::debug::Threading::GetInstance().CurrentThreadID())
 {
     json_writer_.omitEndingLineFeed();
+    script_ = nullptr;
 }
 
 /**
@@ -66,9 +67,15 @@ casper::job::Sequencer::Sequencer (const ev::Loggable::Data& a_loggable_data, co
  */
 casper::job::Sequencer::~Sequencer ()
 {
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     // ... cancel any subscriptions ...
     ExecuteOnMainThread([this] {
+         // ... unsubscribe from REDIS ...
         ::ev::redis::subscriptions::Manager::GetInstance().Unubscribe(this);
+        // ... forget v8 script ...
+        if ( nullptr != script_ ) {
+            delete script_;
+        }
     }, /* a_blocking */ true);
 }
 
@@ -81,7 +88,21 @@ casper::job::Sequencer::~Sequencer ()
  */
 void casper::job::Sequencer::Setup ()
 {
-    /* empty */
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    ExecuteOnMainThread([this] {
+        
+        CC_WARNING_TODO("CJS: /tmp/ -> use output dir prefix variable?");
+        CC_WARNING_TODO("CJS: catch exceptions");
+        
+        // ... prepare v8 simple expression evaluation script ...
+        script_ = new casper::job::sequencer::v8::Script(/* a_owner */ "sequencer", /* a_name */  "cjs_expression_evaluator_" + std::to_string(config_.pid_),
+                                                         /* a_uri */ "thin air", /* a_out_path */ "/tmp/"
+        );
+        // ... load it now ...
+        script_->Load(/* a_external_scripts */ Json::Value::null, /* a_expressions */ {});
+        
+    }, /* a_blocking */ true);
 }
 
 #ifdef __APPLE__
@@ -100,6 +121,7 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
                                   cc::job::easy::Job::Response& o_response)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
     /* TODO implement */
     //   {
     //      "id": "1",
@@ -151,9 +173,18 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
         // ... register sequence and grab first activity ...
         try {
 
+            // ... REDIS job id ...
             uint64_t rjnr = 0;
             if ( 1 != sscanf(a_payload["id"].asCString(), "" UINT64_FMT, &rjnr ) ) {
                 throw Sequencer::JSONValidationException(tracking, ( "Unable to parse job id from '" + a_payload["id"].asString() + "'!" ).c_str());
+            }
+            
+            // ... grab external service id ...
+            std::string service_id;
+            try {
+                service_id = GetJSONObject(a_payload, "service_id" , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
+            } catch (const ev::Exception& a_ev_exception) {
+                throw Sequencer::JSONValidationException(tracking, a_ev_exception.what());
             }
 
             // ... create sequence from payload ...
@@ -164,9 +195,10 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
                                                              ),
                                                              /* a_cid */  config_.instance_,
                                                              /* a_bjid */ tracking.bjid_,
+                                                             /* a_rsid */ service_id,
                                                              /* a_rjnr */ rjnr,
-                                                             /* a_rjid */ ( config_.service_id_ + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
-                                                             /* a_rcid */ ( config_.service_id_ + ':'      + tube_ + ':' + a_payload["id"].asString() )
+                                                             /* a_rjid */ ( service_id + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
+                                                             /* a_rcid */ ( service_id + ':'      + tube_ + ':' + a_payload["id"].asString() )
             );
             // ... register sequence ...
             auto first_activity = RegisterSequence(sequence, *payload);
@@ -337,8 +369,8 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     
     // ... js.finalize_sequence (id INTEGER, status js.status, response JSONB) ...
     ss << "SELECT * FROM js.finalize_sequence(";
-    ss <<   sequence.did() << ',' << a_activity.status();
-    ss <<   ',' << ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_activity.payload())) << "'";
+    ss <<   sequence.did() << ",'" << a_activity.status() << "'";
+    ss <<   ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_activity.payload())) << "'";
     ss << ");";
     
     // ... register @ DB ...
@@ -375,7 +407,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (casper::job::sequencer::Activit
                        a_activity.sequence().bjid(), a_activity.index()
     );
         
-    const std::string id_key = config_.service_id_ + ":jobs:sequential_id";
+    const std::string seq_id_key = config_.service_id_ + ":jobs:sequential_id";
 
     CC_WARNING_TODO("CJS: VALIDATE a_payload - ensure tube is set");
 
@@ -419,13 +451,13 @@ uint16_t casper::job::Sequencer::LaunchActivity (casper::job::sequencer::Activit
 
     osal::ConditionVariable cv;
         
-    ExecuteOnMainThread([this, &a_activity, &cv, &job_defs, &id_key, &tracking] () {
+    ExecuteOnMainThread([this, &a_activity, &cv, &job_defs, &seq_id_key, &tracking] () {
 
-        NewTask([this, &job_defs, &id_key] () -> ::ev::Object* {
+        NewTask([this, &job_defs, &seq_id_key] () -> ::ev::Object* {
             
             // ...  get new job id ...
             return new ::ev::redis::Request(loggable_data_, "INCR", {
-                /* key   */ id_key
+                /* key   */ seq_id_key
             });
             
         })->Then([this, &job_defs] (::ev::Object* a_object) -> ::ev::Object* {
@@ -519,7 +551,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (casper::job::sequencer::Activit
     //
     try {
         // ... bind ids ...
-        a_activity.Bind(/* a_rjid */ job_defs.key_, /* a_rcid */ job_defs.channel_);
+        a_activity.Bind(/* a_rjid */ job_defs.key_, /* a_rcid */ job_defs.channel_, /* a_new_attempt */ true);
         // ... grab job object ...
         const auto job = GetJSONObject(a_activity.payload(), "job" , Json::ValueType::objectValue, /* a_default */ nullptr);
         // .. first, copy payload ( so it can be patched ) ...
@@ -530,22 +562,27 @@ uint16_t casper::job::Sequencer::LaunchActivity (casper::job::sequencer::Activit
         );
         // ... debug only ...
         CC_DEBUG_LOG_MSG("job", "before patch:\n%s",  payload.toStyledString().c_str());
-        // ... if required, evaluate all string fields as v8 expressions ...
-        if ( a_activity.index() > 0 ) {
-            // ... required ...
-            CC_WARNING_TODO("CJS: EVALUATE V8 EXPRESSIONS");
-        }
         // ... set or overwrite 'id' and 'tube' properties ...
         payload["id"]   = job_defs.id_;
         payload["tube"] = job_defs.tube_;
+        if ( false == payload.isMember("ttr") ) {
+            payload["ttr"] = a_activity.ttr();
+        }
+        if ( false == payload.isMember("validity") ) {
+            payload["validity"] = job_defs.expires_in_;
+        }
         // ... debug only ...
         CC_DEBUG_LOG_MSG("job", "after patch:\n%s",  payload.toStyledString().c_str());
         // ... log ...
         CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= patched job #" SIZET_FMT " - %s",
                            a_activity.sequence().bjid(), a_activity.index(), a_activity.rcid().c_str()
         );
-        // ... tmp track payload ...
+        // ... tmp track payload, ttr and validity ...
         a_activity.SetPayload(payload);
+        a_activity.SetTTR(job_defs.ttr_);
+        a_activity.SetValidity(job_defs.ttr_);
+        // ... if required, evaluate all string fields as V8 expressions ...
+        PatchActivity(a_activity);
         // ... now register activity attempt to launch @ db ...
         RegisterActivity(a_activity);
         // ... track activity ...
@@ -573,7 +610,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (casper::job::sequencer::Activit
             Json::Value response = Json::Value(Json::objectValue);
             response["cc-exception"] = a_cc_exception.what();
             // ... reset
-            a_activity.Reset(sequencer::Status::Failed, /* a_payload */ response, /* a_ttr */ 0);
+            a_activity.Reset(sequencer::Status::Failed, /* a_payload */ response);
             // ... finalize activity ( by setting failed status ) ...
             (void)ActivityReturned(a_activity, /* a_response */ nullptr);
             // ... rethrow exception - this job FAILED ...
@@ -607,7 +644,6 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     
     const uint64_t    bjid            = a_activity.sequence().bjid();
     const size_t      aidx            = a_activity.index();
-    const uint64_t    dst_channel_nr  = a_activity.sequence().rjnr();
     const std::string src_channel_key = a_activity.rcid();
     const std::string dst_channel_key = a_activity.sequence().rcid();
 
@@ -617,7 +653,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     );
         
     try {
-        Relay(dst_channel_nr, dst_channel_key, a_message);
+        Relay(bjid, dst_channel_key, a_message);
     } catch (...) {
         try {
             ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
@@ -647,27 +683,32 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Act
                        a_activity.sequence().bjid(), a_activity.index()
     );
     
-    // ... first copy data ...
-    sequencer::Activity copy = sequencer::Activity(a_activity);
-    
     // ... prepare next activity ...
-    sequencer::Activity next = sequencer::Activity(/* a_sequence */ a_activity.sequence(), /* a_id */ a_activity.did(), /* a_index */ copy.index() + 1, /* a_attempt */ 0);
+    sequencer::Activity next = sequencer::Activity(/* a_sequence */ a_activity.sequence(), /* a_id */ a_activity.did(), /* a_index */ a_activity.index(), /* a_attempt */ 0);
     
     // ... finalize activity and pick next ( if any ) ...
-    FinalizeActivity(copy, a_response, next);
+    FinalizeActivity(a_activity, a_response, next);
     
     // ... copy activity ...
-    const auto activity_copy = sequencer::Activity(a_activity);
+    const auto returning_activity = sequencer::Activity(a_activity);
     
     // ... untrack activity ...
     UntrackActivity(a_activity); // ... ⚠️ from now on a_activity is NOT valid ! ⚠️ ...
     
+    CC_WARNING_TODO("CJS: replace assert() calls w/ CC_ASSERT");
+                    
     // ... do we have another activity?
     if ( sequencer::Status::Pending == next.status() ) {
         // ... we're ready to next activity ...
+        assert(next.index() != a_activity.index());
+        assert(0 != next.did().compare(a_activity.did()));
         LaunchActivity(next);
     } else {
 
+        // ... finalize sequence ...
+        FinalizeSequence(returning_activity );
+
+        // ... set final response ...
         const Json::Value* job_response;
         
         // ... we're done or a critical error occurred ...
@@ -680,23 +721,23 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Act
         }
         
         //
-        // ... ⚠️ WARNING: emulating same beahaviour as cc::job::easy::Job::Run ...
+        // ... Notify 'deferred' JOB finalization ...
         //
         const std::string response_str = json_styled_writer_.write(*job_response);
         
-        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> status: %s", activity_copy.sequence().bjid(), (*job_response)["status"].asCString());
+        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> status: %s", returning_activity .sequence().bjid(), (*job_response)["status"].asCString());
                 
         // ... publish result ...
-        Finished(/* a_id               */  activity_copy.sequence().rjnr(),
-                 /* a_channel          */ activity_copy.sequence().rcid(),
+        Finished(/* a_id               */  returning_activity .sequence().bjid(),
+                 /* a_channel          */ returning_activity .sequence().rcid(),
                  /* a_response         */ *job_response,
                  /* a_success_callback */
-                 [this, &activity_copy, &response_str]() {
-                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> response:\n%s", activity_copy.sequence().bjid(), response_str.c_str());
+                 [this, &returning_activity , &response_str]() {
+                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> response:\n%s", returning_activity .sequence().bjid(), response_str.c_str());
                  },
                  /* a_failure_callback */
-                 [this, &activity_copy](const ev::Exception& a_ev_exception){
-                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> exception: %s", activity_copy.sequence().bjid(), a_ev_exception.what());
+                 [this, &returning_activity ](const ev::Exception& a_ev_exception){
+                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> exception: %s", returning_activity .sequence().bjid(), a_ev_exception.what());
                     (void)(a_ev_exception);
                 }
         );
@@ -740,10 +781,15 @@ void casper::job::Sequencer::RegisterActivity (const casper::job::sequencer::Act
     
     data["launched_at"] = cc::UTCTime::NowISO8601WithTZ();
     data["payload"    ] = a_activity.payload();
+    data["bjid"       ] = a_activity.sequence().bjid();
+    data["rjid"       ] = a_activity.rjid();
+    data["rcid"       ] = a_activity.rcid();
       
-    // ... js.register_activity (sid INTEGER, id INTEGER, attempt INTEGER, payload JSONB, status js.status); ...
+    // ... js.register_activity (sid INTEGER, id INTEGER, bjid INTEGER, rjid TEXT, rcid TEXT, attempt INTEGER, payload JSONB, status js.status); ...
     ss << "SELECT * FROM js.register_activity(";
-    ss <<   a_activity.sequence().did() << ',' << a_activity.did() << ',' << a_activity.attempt();
+    ss <<   a_activity.sequence().did() << ',' << a_activity.did();
+    ss <<  ',' << a_activity.sequence().bjid() << ",'" << a_activity.rjid() << "','" << a_activity.rcid() << "'";
+    ss <<  ',' << a_activity.attempt();
     ss <<   ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(data)) << "'";
     ss <<   ",'" << sequencer::Status::InProgress << "'";
     ss << ");";
@@ -859,7 +905,10 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                    // ... no moe interest, we're done
                    return;
                }
-                       
+               
+               // ... update activity statuus ...
+               activity_it->second->SetStatus(m_it->second);
+               
                //
                // ... we're interested:
                // ... ( completed, failed or cancelled )
@@ -931,7 +980,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
  *
  * @param a_activity Activity info.
  */
-void casper::job::Sequencer::PushActivity (const casper::job::sequencer::Activity& a_activity)
+    void casper::job::Sequencer::PushActivity (const casper::job::sequencer::Activity& a_activity)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
@@ -958,7 +1007,7 @@ void casper::job::Sequencer::PushActivity (const casper::job::sequencer::Activit
  * @param a_response Activity response.
  * @param o_next     Pre-filled next activity info ( payload, ttr and status to be set here, if there is another activity to load ).
  */
-void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity& a_activity, const Json::Value* a_response,
+void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Activity& a_activity, const Json::Value* a_response,
                                                casper::job::sequencer::Activity& o_next)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
@@ -985,7 +1034,6 @@ void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity&
     // ... ensure next activity is not valid yet ...
     //
     o_next.SetStatus(casper::job::sequencer::Status::NotSet);
-
     
     //
     // NOTICE: rtt will be calculated and set unpon js.finalize_activity execution ...
@@ -995,18 +1043,17 @@ void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity&
     if ( nullptr != a_response ) {
         // ... copy response ...
         attempt["response"] = *a_response;
-        // .. and set it as activity payload ...
-        a_activity.SetPayload(attempt["response"]);
     } else {
         // ... else, payload MUST be already set, use it ...
         attempt["response"] = a_activity.payload();
     }
     
-    // ... js.finalize_activity (sid INTEGER, id INTEGER, attempt INTEGER, response JSONB, status js.status) ...
+    // ... js.finalize_activity (sid INTEGER, id INTEGER, attempt INTEGER, payload JSONB, response JSONB, status js.status) ...
     ss << "SELECT * FROM js.finalize_activity(";
-    ss <<   a_activity.sequence().did() << ',' << a_activity.did() << ',' << a_activity.attempt();
-    ss <<   ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(attempt)) << "'";
-    ss <<   ",'" << sequencer::Status::InProgress << "'";
+    ss <<   a_activity.sequence().did() << ',' << a_activity.did();
+    ss <<  ',' << a_activity.attempt() << ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(attempt)) << "'";
+    ss <<  ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(attempt["response"])) << "'";
+    ss <<  ",'" << a_activity.status() << "'";
     ss << ");";
   
     // ... debug ...
@@ -1021,8 +1068,12 @@ void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity&
                         [&o_next] (const Json::Value& a_value) {
                             // ... array is expected ...
                             if ( a_value.size() > 0 ) {
-                                CC_WARNING_TODO("CJS: pick ttr");
-                                o_next.Reset(sequencer::Status::Pending, /* a_payload */ a_value[0], /* a_ttr */ 0);
+                                const Json::Value& next = a_value[0];
+                                if ( false == next["id"].isNull() ) {
+                                    o_next.Reset(sequencer::Status::Pending, /* a_payload */ next);
+                                    o_next.SetIndex(static_cast<ssize_t>(next["index"].asUInt()));
+                                    o_next.SetDID(next["id"].asString());
+                                }
                             }
                         }
     );
@@ -1038,7 +1089,7 @@ void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity&
         o_next.SetStatus(casper::job::sequencer::Status::Done);
     } else {
         // ... next activity available?
-        if ( false == o_next.payload().isNull() ) {
+        if ( casper::job::sequencer::Status::Pending == o_next.status() ) {
             // ... yes, but first check if previous activity succeeded ...
             const Json::Value status = (*a_response).get("status", "");
             const auto         m_it  = s_irj_teminal_status_map_.find(status.asCString());
@@ -1047,9 +1098,9 @@ void casper::job::Sequencer::FinalizeActivity (casper::job::sequencer::Activity&
                 // ... set standard 'failed' response ...
                 SetFailedResponse(/* a_code */ 404, Json::Value("Invalid status '" + std::string(status.asCString()) + "'"), response);
                 // ... invalid status - set internal error ...
-                o_next.Reset(sequencer::Status::Failed, /* a_payload */ response, /* a_ttr */ 0);
+                o_next.Reset(sequencer::Status::Failed, /* a_payload */ response);
             }
-        } else { // true == o_next.payload().isNull()
+        } else {
             // ... no, we're done ...
             o_next.SetStatus(sequencer::Status::Done);
         }
@@ -1096,7 +1147,7 @@ void casper::job::Sequencer::TrackActivity (casper::job::sequencer::Activity* a_
                        a_activity->sequence().bjid(), a_activity->index()
     );
     
-    CC_WARNING_TODO("CJS: register an event in this thread so we can giveup tracking after ttr + n seconds");
+    CC_WARNING_TODO("CJS: unregister an event in this thread so we can giveup tracking after ttr + n seconds");
     
     running_activities_[a_activity->rcid()] = a_activity;
 }
@@ -1270,11 +1321,6 @@ const ::ev::postgresql::Value* casper::job::Sequencer::EnsurePostgreSQLValue (co
     return &reply->value();
 }
 
-void casper::job::Sequencer::ReserveJob (const Json::Value& a_job) const
-{
-    
-}
-
 void casper::job::Sequencer::TrapUnhandledExceptions (const char* const a_type, const std::function<void()>& a_callback,
                                                       const casper::job::Sequencer::Tracking& a_tracking)
 {
@@ -1304,10 +1350,10 @@ void casper::job::Sequencer::TrapUnhandledExceptions (const char* const a_type, 
 }
 
 /**
-* @brief Serialize a JSON string to a JSON Object.
-*
-* @param a_value JSON string to parse.
-* @param o_value JSON object to fill.
+ * @brief Serialize a JSON string to a JSON Object.
+ *
+ * @param a_value JSON string to parse.
+ * @param o_value JSON object to fill.
 */
 const Json::Value& casper::job::Sequencer::AsJSON (const std::string& a_value, Json::Value& o_value)
 {
@@ -1316,4 +1362,155 @@ const Json::Value& casper::job::Sequencer::AsJSON (const std::string& a_value, J
     ParseJSON(a_value, o_value);
     
     return o_value;
+}
+
+/**
+ * @brief Patch an activitiy payload using V8.
+ *
+ * @param a_activity Activity info.
+ */
+void casper::job::Sequencer::PatchActivity (casper::job::sequencer::Activity& a_activity)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... if it's the first activity, nothing to patch here ...
+    if ( 0 == a_activity.index() ) {
+        return;
+    }
+    // ... load previous activities responses to V8 engine ..
+    std::stringstream ss; ss.clear(); ss.str("");
+    
+    // ... js.get_activities_responses (sid INTEGER) ...
+    ss << "SELECT * FROM js.get_activities_responses(";
+    ss <<  a_activity.sequence().cid();
+    ss << ");";
+    
+    Json::Value responses = Json::Value(Json::ValueType::arrayValue);
+    
+    // ... register @ DB ...
+    ExecuteQueryAndWait(/* a_tracking         */ CC_TRACK_CALL(a_activity.sequence().bjid(), "GETTING ACTIVITIES RESPONSES"),
+                        /* a_query            */ ss.str(), /* a_expected */ ExecStatusType::PGRES_TUPLES_OK,
+                        /* a_success_callback */
+                        [&responses] (const Json::Value& a_value) {
+                            //
+                            // EXPECTING:
+                            //
+                            // {
+                            //    "id" : <numeric>,
+                            //    "index" : <numeric>,
+                            //    "response" : <json_array>,
+                            //    "sid" : <numeric>,
+                            //    "status" : <string>
+                            // }
+                            //
+                            for ( Json::ArrayIndex idx = 0 ; idx < a_value.size() ; ++idx ) {
+                                if ( false == a_value[idx]["id"].isNull() ) {
+                                    responses.append(a_value[idx]["response"]);
+                                }
+                            }
+                        }
+    );
+    
+    if ( 0 == responses.size() ) {
+        return;
+    }
+    
+    CC_WARNING_TODO("CJS: catch evaluation exceptions");
+    
+    ::v8::Persistent<::v8::Value> data;
+
+    Json::FastWriter fw; fw.omitEndingLineFeed();
+    
+    Json::Value object = Json::Value(Json::ValueType::objectValue);
+    object["responses"] = responses;
+
+    
+    fprintf(stdout, "\n ---- : %s\n", fw.write(object).c_str());
+    
+    const std::string name = "data" + std::to_string(reinterpret_cast<intptr_t>(this));
+    script_->SetData(/* a_name  */ name.c_str(),
+                    /* a_data   */ fw.write(object).c_str(),
+                    /* o_object */ nullptr,
+                    /* o_value  */ &data,
+                    /* a_key    */ nullptr
+    );
+    
+    
+    ::cc::v8::Value value;
+    
+    Json::Value payload = a_activity.payload();
+
+    fprintf(stdout, "\n  IN: %s\n", payload.toStyledString().c_str());
+
+    PatchObject(payload, [this, &data, &value] (const std::string& a_expression) -> Json::Value {
+        
+        value.SetNull();
+        
+        EvaluateExpression(data, a_expression, value);
+        
+        return Json::Value(value.AsString());
+        
+    });
+            
+    fprintf(stdout, "\n OUT: %s\n", payload.toStyledString().c_str());
+        
+    fflush(stdout);
+    
+    a_activity.SetPayload(payload);
+}
+
+/**
+ * @brief
+ *
+ * @param a_value
+ * @param a_callback
+ */
+void casper::job::Sequencer::PatchObject (Json::Value& a_object, const std::function<Json::Value(const std::string& a_expression)>& a_callback)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    switch ( a_object.type() ) {
+        case Json::ValueType::objectValue:   // object value (collection of name/value pairs)
+            for( auto member : a_object.getMemberNames()) {
+                PatchObject(a_object[member], a_callback);
+            }
+            break;
+        case Json::ValueType::arrayValue:    // array value (ordered list)
+            for ( auto ait = a_object.begin(); ait != a_object.end(); ++ait ) {
+                PatchObject(*ait, a_callback);
+            }
+            break;
+        case Json::ValueType::stringValue:   // UTF-8 string value
+            if ( nullptr != strstr(a_object.asCString(), "$.") ) {
+                a_object = a_callback(a_object.asString());
+            }
+            break;
+        case Json::ValueType::nullValue:    // 'null' value
+        case Json::ValueType::intValue:     // signed integer value
+        case Json::ValueType::uintValue:    // unsigned integer value
+        case Json::ValueType::realValue:    // double value
+        case Json::ValueType::booleanValue: // bool value
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Evaluate an JavaScript expression using V8 engine.
+ *
+ * @param a_value      Previously filled v8 data.
+ * @param a_expression Expression to evaluate.
+ * @param o_value      Translated value.
+ */
+void casper::job::Sequencer::EvaluateExpression (const ::v8::Persistent<::v8::Value>& a_value, const std::string& a_expression, ::cc::v8::Value& o_value)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    ExecuteOnMainThread([this, &a_value, &a_expression, &o_value] {
+                        
+        CC_WARNING_TODO("CJS: catch evaluation exceptions");
+
+        script_->Evaluate(a_value, a_expression, o_value);
+                
+    }, /* a_blocking */ true);
+    
 }

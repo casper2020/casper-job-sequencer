@@ -31,6 +31,8 @@
 
 #include "casper/job/sequencer/activity.h"
 
+#include "casper/job/sequencer/v8/script.h"
+
 namespace casper
 {
 
@@ -126,6 +128,7 @@ namespace casper
         private: // Data
             
             std::map<std::string, sequencer::Activity*> running_activities_; //!< RCID ( REDIS Channel ID ) -> Activity
+            casper::job::sequencer::v8::Script*         script_;
 
         public: // Constructor(s) / Destructor
             
@@ -165,7 +168,7 @@ namespace casper
             void                                             PushActivity                  (const sequencer::Activity& a_activity);
 
             // REDIS
-            void                                             FinalizeActivity              (sequencer::Activity& a_activity, const Json::Value* a_response,
+            void                                             FinalizeActivity              (const sequencer::Activity& a_activity, const Json::Value* a_response,
                                                                                             sequencer::Activity& a_next);
             void                                             TrackActivity                 (const sequencer::Activity& a_activity);
             void                                             TrackActivity                 (sequencer::Activity* a_activity);
@@ -181,21 +184,21 @@ namespace casper
                                                                                             const std::function<void(const ev::Exception& a_exception)> a_failure_callback = nullptr);
                                                                                             
             const ::ev::postgresql::Value*                  EnsurePostgreSQLValue          (const ::ev::Object* a_object, const ExecStatusType& a_expected);
-            
-            //
-            //
-            //
-            void                                            ReserveJob                     (const Json::Value& a_job) const;
-            
+                        
             //
             // OTHER HELPERS
             //
             void                                            TrapUnhandledExceptions        (const char* const a_type, const std::function<void()>& a_callback,
                                                                                             const Tracking& a_tracking);
             //
-            // SAFETY HELPERS
+            // SERIALIZATION HELPERS
             //
             const Json::Value& AsJSON (const std::string& a_value, Json::Value& o_value);
+            
+            void               PatchActivity (sequencer::Activity& a_activity);
+            
+            void               PatchObject        (Json::Value& a_value, const std::function<Json::Value(const std::string& a_expression)>& a_callback);
+            void               EvaluateExpression (const ::v8::Persistent<::v8::Value>& a_value, const std::string& a_expression, ::cc::v8::Value& o_value);
 
         }; // end of class 'Sequencer'
               

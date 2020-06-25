@@ -50,7 +50,7 @@ namespace casper
                 
             private: // Data
                                                 
-                std::string        did_;         //!< DB  id ( form table js.sequence[id] as string ).
+                std::string        did_;         //!< DB id ( form table js.activities[id] as string ).
                 size_t             index_;       //!< JOB index.
                 Json::Value        payload_;     //!< JOB payload.
                 size_t             attempt_;     //!< JOB attempt number.
@@ -69,13 +69,16 @@ namespace casper
                 
             public: // Method(s) / Function(s)
                 
-                void      Bind    (const std::string& a_rjid, const std::string& a_rcid);
+                void      Bind    (const std::string& a_rjid, const std::string& a_rcid, const bool a_new_attempt);
                 Activity& Bind    (const Status& a_status, const uint32_t& a_validity, const uint32_t& a_ttr, const Json::Value& a_payload);
-                void      Reset   (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_ttr);
+                void      Reset   (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_validity = 0, const uint32_t& a_ttr = 0);
                 
-                void SetPayload (const Json::Value& a_payload);
-                void SetStatus  (const Status& a_status);
-                void SetTTR     (const uint32_t& a_ttr);
+                void SetIndex    (const size_t& a_index);
+                void SetDID      (const std::string& a_did);
+                void SetPayload  (const Json::Value& a_payload);
+                void SetStatus   (const Status& a_status);
+                void SetValidity (const uint32_t& a_validity);
+                void SetTTR      (const uint32_t& a_ttr);
 
             public: // RO Method(s) / Function(s)
                 
@@ -101,11 +104,15 @@ namespace casper
              *
              * @param a_rjid
              * @param a_rcid
+             * @param a_new_attempt
              */
-            inline void Activity::Bind (const std::string& a_rjid, const std::string& a_rcid)
+            inline void Activity::Bind (const std::string& a_rjid, const std::string& a_rcid, const bool a_new_attempt)
             {
-                rjid_    = a_rjid;
-                rcid_    = a_rcid;
+                rjid_ = a_rjid;
+                rcid_ = a_rcid;
+                if ( true == a_new_attempt ) {
+                    attempt_ += 1;
+                }
             }
         
             /**
@@ -128,12 +135,33 @@ namespace casper
              *
              *  @return Ref to this object instance;
              */
-            inline void Activity::Reset (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_ttr)
+            inline void Activity::Reset (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_validity, const uint32_t& a_ttr)
             {
                 status_      = a_status;
                 payload_.clear();
                 payload_     = a_payload;
                 ttr_         = a_ttr;
+                validity_    = a_validity;
+            }
+
+            /**
+             * @brief Set activity index.
+             *
+             * @param a_index Index in sequence.
+            */
+            inline void Activity::SetIndex (const size_t& a_index)
+            {
+                index_ = a_index;
+            }
+
+            /**
+             * @brief Set activity database id.
+             *
+             * @param a_did DB id ( form table js.activities[id] as string ).
+            */
+            inline void Activity::SetDID (const std::string& a_did)
+            {
+                did_ = a_did;
             }
 
             /**
@@ -157,6 +185,16 @@ namespace casper
                 status_ = a_status;
             }
         
+            /**
+             * @brief Set activity validity.
+             *
+             * @param a_validity
+             */
+            inline void Activity::SetValidity (const uint32_t& a_validity)
+            {
+                validity_ = a_validity;
+            }
+            
             /**
              * @brief Set activity TTR.
              *

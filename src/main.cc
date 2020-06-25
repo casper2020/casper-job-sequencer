@@ -37,21 +37,26 @@
  */
 int main(int argc, char** argv)
 {
-    cc::job::easy::Handler::GetInstance().Start({
-        /* abbr_           */ CASPER_JON_SEQUENCER_ABBR,
-        /* name_           */ CASPER_JON_SEQUENCER_NAME,
-        /* version_        */ CASPER_JON_SEQUENCER_VERSION,
-        /* rel_date_       */ CASPER_JON_SEQUENCER_VERSION,
-        /* info_           */ CASPER_JON_SEQUENCER_INFO,
-        /* banner_         */ CASPER_JON_SEQUENCER_BANNER,
-        /* argc_           */ argc,
-        /* argv_           */ const_cast<const char** const >(argv),
-    }, {
+    cc::job::easy::Handler::GetInstance().Start(
+        /* a_arguments */
+        {
+            /* abbr_           */ CASPER_JON_SEQUENCER_ABBR,
+            /* name_           */ CASPER_JON_SEQUENCER_NAME,
+            /* version_        */ CASPER_JON_SEQUENCER_VERSION,
+            /* rel_date_       */ CASPER_JON_SEQUENCER_VERSION,
+            /* info_           */ CASPER_JON_SEQUENCER_INFO,
+            /* banner_         */ CASPER_JON_SEQUENCER_BANNER,
+            /* argc_           */ argc,
+            /* argv_           */ const_cast<const char** const >(argv),
+        },
+        /* a_factories */
+        {
             {
                 casper::job::Sequencer::s_tube_, [] (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config) {
                     return new casper::job::Sequencer(a_loggable_data, a_config);
                 }
             }
-        }
+        },
+        /* a_polling_timeout */ 20.0 /* milliseconds */
     );
 }

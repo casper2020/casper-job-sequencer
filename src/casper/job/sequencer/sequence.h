@@ -31,6 +31,8 @@
 
 #include "casper/job/sequencer/status.h"
 
+#include "casper/job/sequencer/v8/script.h"
+
 namespace casper
 {
 
@@ -55,15 +57,18 @@ namespace casper
                 Source      source_; //!< One of \link Source \link.
                 uint64_t    cid_ ;   //!< CLUSTER ID.
                 int64_t     bjid_;   //!< BEANSTALKD job id ( for logging proposes ).
+                std::string rsid_;   //!< REDIS service id.
                 uint64_t    rjnr_;   //!< REDIS job number.
                 std::string rjid_;   //!< REDIS job key.
                 std::string rcid_;   //!< REDIS job channel.
-                std::string did_ ;   //!< DB id ( form table js.sequence[id] as string ).
+                std::string did_ ;   //!< DB id ( form table js.sequences[id] as string ).
 
             public: // Constructor(s) / Destructor
                 Sequence () = delete;
-                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid);
-                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did);
+                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid,
+                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid);
+                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid,
+                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did);
                 Sequence (const Sequence& a_sequence);
                 virtual ~Sequence();
                 
@@ -76,6 +81,7 @@ namespace casper
                 const Source&      source () const;
                 const uint64_t&    cid    () const;
                 const int64_t&     bjid   () const;
+                const std::string& rsid   () const;
                 const uint64_t&    rjnr   () const;
                 const std::string& rjid   () const;
                 const std::string& rcid   () const;
@@ -97,6 +103,7 @@ namespace casper
                 source_ = a_sequence.source_;
                 cid_    = a_sequence.cid_;
                 bjid_   = a_sequence.bjid_;
+                rsid_   = a_sequence.rsid_;
                 rjnr_   = a_sequence.rjnr_;
                 rjid_   = a_sequence.rjid_;
                 rcid_   = a_sequence.rcid_;
@@ -129,6 +136,14 @@ namespace casper
             }
         
             /**
+             * @return RO access to REDIS service ID.
+             */
+            inline const std::string& Sequence::rsid () const
+            {
+                return rsid_;
+            }
+        
+            /**
              * @return RO access to REDIS job number.
              */
             inline const uint64_t& Sequence::rjnr () const
@@ -153,7 +168,7 @@ namespace casper
             }
             
             /**
-             * @return RO access to DB id ( form table js.sequence[id] as string ).
+             * @return RO access to DB id ( form table js.sequences[id] as string ).
              */
             inline const std::string& Sequence::did  () const
             {
