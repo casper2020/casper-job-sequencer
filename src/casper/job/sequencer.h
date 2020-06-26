@@ -31,6 +31,8 @@
 
 #include "casper/job/sequencer/activity.h"
 
+#include "cc/v8/exception.h"
+
 #include "casper/job/sequencer/v8/script.h"
 
 namespace casper
@@ -100,23 +102,44 @@ namespace casper
                 
             };
             
-            class JSONValidationException final : public Exception
+            class BadRequestException final : public Exception
             {
             public: // Constructor(s) / Destructor
                 
-                JSONValidationException (const Tracking& a_tracking, const char* const a_why)
+                BadRequestException (const Tracking& a_tracking, const char* const a_why)
                     : Exception(a_tracking, /* a_code */ 400, a_why)
                 {
                     /* empty */
                 }
                 
-                virtual ~JSONValidationException ()
+                virtual ~BadRequestException ()
                 {
                     /* empty */
                 }
             };
+
+            typedef BadRequestException JSONValidationException;
             
-            
+            class V8ExpressionEvaluationException final : public Exception
+            {
+                
+            public: // Constructor(s) / Destructor
+                
+                V8ExpressionEvaluationException (const Tracking& a_tracking, const char* const a_why) = delete;
+                
+                V8ExpressionEvaluationException (const Tracking& a_tracking, const ::cc::v8::Exception& a_v8e)
+                    : Exception(a_tracking, /* a_code */ 400, /* a_why */ ( "\n" + std::string(a_v8e.what()) + "\n" ).c_str())
+                {
+                    /* empty */
+                }
+                
+                virtual ~V8ExpressionEvaluationException ()
+                {
+                    /* empty */
+                }
+                
+            };
+
         private: // Static Const Data
             
             static const std::map<std::string, sequencer::Status> s_irj_teminal_status_map_;
@@ -148,14 +171,14 @@ namespace casper
             // SEQUENCER
             //
             sequencer::Activity                              RegisterSequence              (sequencer::Sequence& a_sequence, const Json::Value& a_payload);
-            void                                             FinalizeSequence              (const sequencer::Activity& a_activity);
+            void                                             FinalizeSequence              (const sequencer::Activity& a_activity, const Json::Value& a_response);
             
             //
             // ACTIVITY
             //
-            uint16_t                                         LaunchActivity                (sequencer::Activity& a_activity);
-            void                                             ActivityMessageRelay          (const sequencer::Activity& a_activity, const Json::Value& a_message);
-            void                                             ActivityReturned              (const sequencer::Activity& a_activity, const Json::Value* a_response);
+            uint16_t                                         LaunchActivity                (const Tracking& a_tracking, sequencer::Activity& a_activity, const bool a_at_run);
+            void                                             ActivityMessageRelay          (const Tracking& a_tracking, const sequencer::Activity& a_activity, const Json::Value& a_message);
+            void                                             ActivityReturned              (const Tracking& a_tracking, const sequencer::Activity& a_activity, const Json::Value* a_response);
             
             void                                             RegisterActivity              (const sequencer::Activity& a_activity);
             
@@ -195,10 +218,9 @@ namespace casper
             //
             const Json::Value& AsJSON (const std::string& a_value, Json::Value& o_value);
             
-            void               PatchActivity (sequencer::Activity& a_activity);
+            void               PatchActivity      (const Tracking& a_tracking, sequencer::Activity& a_activity);
             
             void               PatchObject        (Json::Value& a_value, const std::function<Json::Value(const std::string& a_expression)>& a_callback);
-            void               EvaluateExpression (const ::v8::Persistent<::v8::Value>& a_value, const std::string& a_expression, ::cc::v8::Value& o_value);
 
         }; // end of class 'Sequencer'
               
