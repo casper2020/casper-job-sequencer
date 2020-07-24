@@ -177,12 +177,14 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
             }
             
             // ... grab external service id ...
-            std::string service_id;
-            try {
-                service_id = GetJSONObject(a_payload, "service_id" , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
-            } catch (const ev::Exception& a_ev_exception) {
-                throw Sequencer::JSONValidationException(tracking, a_ev_exception.what());
-            }
+            // TODO REVIEW
+//            std::string service_id;
+//            try {
+//                service_id = GetJSONObject(a_payload, "service_id" , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
+//            } catch (const ev::Exception& a_ev_exception) {
+//                throw Sequencer::JSONValidationException(tracking, a_ev_exception.what());
+//            }
+            const std::string service_id = config_.service_id_;
 
             // ... create sequence from payload ...
             auto sequence = casper::job::sequencer::Sequence(
@@ -223,9 +225,9 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
                     );
                 }
                 // ... jump for common exception handling ...
-                throw casper::job::Sequencer::JumpErrorAlreadySet(tracking, /* o_code */ 500, LastError()["why"].asCString());
+                throw Sequencer::JumpErrorAlreadySet(tracking, /* o_code */ 500, LastError()["why"].asCString());
             }
-        } catch (const casper::job::Sequencer::Exception& a_exeption) {
+        } catch (const Sequencer::Exception& a_exeption) {
             // ... track 'SEQUENCE' or 'ACTIVITY' payload error ...
             AppendError(/* a_type  */ a_exeption.tracking_.action_.c_str(),
                         /* a_why   */ a_exeption.what(),
@@ -233,10 +235,10 @@ void casper::job::Sequencer::Run (const int64_t& a_id, const Json::Value& a_payl
                         /* a_code */  ev::loop::beanstalkd::Job::k_exception_rc_
             );
             // ... jump for common exception handling ...
-            throw casper::job::Sequencer::JumpErrorAlreadySet(tracking, a_exeption.code_ ,LastError()["why"].asCString());
+            throw JumpErrorAlreadySet(tracking, a_exeption.code_ ,LastError()["why"].asCString());
         }
         
-    } catch (const casper::job::Sequencer::JumpErrorAlreadySet& a_exception) {
+    } catch (const JumpErrorAlreadySet& a_exception) {
         // ... set response code ...
         o_response.code_ = a_exception.code_;
         // ... debug ...
@@ -375,14 +377,21 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     ss <<   ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_response)) << "'";
     ss << ");";
     
+    double rtt = 0;
+    
     // ... register @ DB ...
     ExecuteQueryAndWait(/* a_tracking */ CC_TRACK_CALL(sequence.bjid(), "FINALIZING JOB SEQUENCE"),
-                        /* a_query    */ ss.str(), /* a_expected */ ExecStatusType::PGRES_TUPLES_OK
+                        /* a_query    */ ss.str(), /* a_expected */ ExecStatusType::PGRES_TUPLES_OK,
+                        /* a_success_callback */
+                        [&rtt] (const Json::Value& a_value) {
+                            // ... array with one element is expected ...
+                            rtt = a_value[0]["rtt"].asDouble() * 1000;
+                        }
     );
     
     // ... debug ...
-    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= finalized job sequence - did = %s",
-                       sequence.bjid(), sequence.did().c_str()
+    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= finalized job sequence - did = %s ~~ took " DOUBLE_FMT "ms",
+                       sequence.bjid(), sequence.did().c_str(), rtt
     );
 }
 
@@ -548,7 +557,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::Sequencer::T
         return job_defs.sc_;
     }
     
-    casper::job::Sequencer::Exception* exception = nullptr;
+    Sequencer::Exception* exception = nullptr;
     
     //
     //  ... prepare, register and push activity job ...
@@ -604,7 +613,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::Sequencer::T
             ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
         } catch (::cc::Exception& a_cc_exception) {
             // ... copy exception ...
-            exception = new casper::job::Sequencer::Exception(a_tracking, 400, a_cc_exception.what());
+            exception = new Sequencer::Exception(a_tracking, 400, a_cc_exception.what());
         }
     }
     
@@ -622,7 +631,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::Sequencer::T
         // ... if at 'run' function ...
         if ( true == a_at_run ) {
             // ... copy exception ...
-            const auto copy = casper::job::Sequencer::Exception(a_tracking, exception->code_, exception->what());
+            const auto copy = Sequencer::Exception(a_tracking, exception->code_, exception->what());
             // ... reset
             a_activity.Reset(sequencer::Status::Failed, /* a_payload */ Json::Value::null);
             // ... get rid of exception ...
@@ -772,33 +781,9 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::Sequencer::Tra
         
         // ... finalize sequence ...
         FinalizeSequence(returning_activity, *job_response);
-
-        //
-        // ... Notify 'deferred' JOB finalization ...
-        //
-        const std::string response_str = json_styled_writer_.write(*job_response);
         
-        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> status: %s", returning_activity .sequence().bjid(), (*job_response)["status"].asCString());
-                
-        // ... publish result ...
-        Finished(/* a_id               */ returning_activity .sequence().bjid(),
-                 /* a_channel          */ returning_activity .sequence().rcid(),
-                 /* a_response         */ *job_response,
-                 /* a_success_callback */
-                 [this, &returning_activity , &response_str]() {
-                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> response:\n%s", returning_activity .sequence().bjid(), response_str.c_str());
-                 },
-                 /* a_failure_callback */
-                 [this, &returning_activity ](const ev::Exception& a_ev_exception){
-                    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> exception: %s", returning_activity .sequence().bjid(), a_ev_exception.what());
-                    (void)(a_ev_exception);
-                }
-        );
-        
-        // ... log status ...
-        EV_LOOP_BEANSTALK_JOB_LOG_QUEUE("STATUS", "%s",
-                                        (*job_response)["status"].asCString()
-        );
+        // ... finish job ...
+        FinalizeJob(returning_activity.sequence(), *job_response);
     }
 }
 
@@ -911,84 +896,141 @@ void casper::job::Sequencer::SubscribeActivity (const casper::job::sequencer::Ac
  */
 EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActivityMessageReceived (const std::string& a_id, const std::string& a_message)
 {
+    
+    CC_WARNING_TODO("CJS: HANDLE CANCELLATION MESSAGE!!");
+    
     CC_DEBUG_FAIL_IF_NOT_AT_MAIN_THREAD();
     
     ExecuteOnLooperThread([this, a_id, a_message]() {
-
-           CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
         
-           // ... log ...
-           CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= received message from channel '%s': %s",
-                              static_cast<uint64_t>(0), a_id.c_str(), a_message.c_str()
-           );
-           
-           // ... expecting message?
-           const auto activity_it = running_activities_.find(a_id);
-           if ( running_activities_.end() == activity_it ) {
-               // ... log ...
-               CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': %s",
-                                  static_cast<uint64_t>(0), a_id.c_str(), "ignored"
-               );
-               // ... not expected, we're done ...
-               return;
-           }
-           
-           try {
+        casper::job::sequencer::Sequence* sequence  = nullptr;
+        Sequencer::Exception*             exception = nullptr;
 
-               Json::Value  object;
-
-               // ... parse JSON message ...
-               AsJSON(a_message, object);
-               
-               // ... check this inner job status ...
-               const std::string status = object.get("status", "").asCString();
-               CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': status is %s",
-                                  static_cast<uint64_t>(0), a_id.c_str(), status.c_str()
-               );
-                              
-               // ... interest in this status ( completed, failed or cancelled ) ?
-               const auto m_it = s_irj_teminal_status_map_.find(status);
-               if ( s_irj_teminal_status_map_.end() == m_it ) {
-                   //
-                   // ... relay 'in-progress' messages ...
-                   // ... ( because we may have more activities to run ) ...
-                   if ( 0 == status.compare("in-progress") ) {
-                       ActivityMessageRelay(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "ACTIVITY MESSAGE RELAY"),
-                                            *activity_it->second, object
-                       );
-                   }
-                   // ... no moe interest, we're done
-                   return;
-               }
-               
-               // ... update activity statuus ...
-               activity_it->second->SetStatus(m_it->second);
-               
-               //
-               // ... we're interested:
-               // ... ( completed, failed or cancelled )
-               //
-               // ... - we've got all required data to finalize this inner job
-               // ... - we can launch the next inner job ( if required )
-               //
-               ActivityReturned(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "RETURNING ACTIVITY"),
-                                *activity_it->second, &object
-               );
-                
-               // ... ⚠️ from now on a_activity is NOT valid ! ⚠️ ...
-               
-           } catch (const ::cc::Exception& a_cc_exception) {
-               CC_WARNING_TODO("CJS: HANDLE EXCEPTIONS!!");
-               CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT "'%s': %s",
-                                  static_cast<uint64_t>(0), a_id.c_str(), a_cc_exception.what()
-               );
-           } catch (...) {
-               CC_WARNING_TODO("CJS: HANDLE EXCEPTIONS!!");
-           }
+        CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
         
-           
+        // ... log ...
+        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= received message from channel '%s': %s",
+                           static_cast<uint64_t>(0), a_id.c_str(), a_message.c_str()
+        );
+        
+        // ... expecting message?
+        const auto activity_it = running_activities_.find(a_id);
+        if ( running_activities_.end() == activity_it ) {
+            // ... log ...
+            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': %s",
+                               static_cast<uint64_t>(0), a_id.c_str(), "ignored"
+            );
+            // ... not expected, we're done ...
+            return;
+        }
+        
+        try {
+            
+            Json::Value  object;
+            
+            // ... parse JSON message ...
+            AsJSON(a_message, object);
+            
+            // ... check this inner job status ...
+            const std::string status = object.get("status", "").asCString();
+            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': status is %s",
+                               static_cast<uint64_t>(0), a_id.c_str(), status.c_str()
+            );
+            
+            // ... interest in this status ( completed, failed or cancelled ) ?
+            const auto m_it = s_irj_teminal_status_map_.find(status);
+            if ( s_irj_teminal_status_map_.end() == m_it ) {
+                //
+                // ... relay 'in-progress' messages ...
+                // ... ( because we may have more activities to run ) ...
+                if ( 0 == status.compare("in-progress") ) {
+                    ActivityMessageRelay(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "ACTIVITY MESSAGE RELAY"),
+                                         *activity_it->second, object
+                    );
+                }
+                // ... no moe interest, we're done
+                return;
+            }
+            
+            // ... update activity statuus ...
+            activity_it->second->SetStatus(m_it->second);
+            
+            // ... copy sequence info - for try catch ...
+            sequence = new casper::job::sequencer::Sequence(activity_it->second->sequence());
+            
+            //
+            // ... we're interested:
+            // ... ( completed, failed or cancelled )
+            //
+            // ... - we've got all required data to finalize this inner job
+            // ... - we can launch the next inner job ( if required )
+            //
+            ActivityReturned(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "RETURNING ACTIVITY"),
+                             *activity_it->second, &object
+            );
+            
+            // ... ⚠️ from now on a_activity is NOT valid ! ⚠️ ...
+            
+        } catch (const Sequencer::JumpErrorAlreadySet& a_jp_exception) {
+
+            // ... copy exception ...
+            exception = new Sequencer::JumpErrorAlreadySet(a_jp_exception);
+            // ... log it ...
+            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
+                               a_jp_exception.tracking_.bjid_,
+                               a_jp_exception.tracking_.function_.c_str(), a_jp_exception.tracking_.line_,
+                               a_jp_exception.tracking_.action_.c_str(),
+                               a_jp_exception.what()
+            );
+        
+        } catch (const Sequencer::Exception& a_sq_exception) {
+            // ... copy exception ...
+            exception = new Sequencer::Exception(a_sq_exception);
+            // ... log it ...
+            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT "'%s': %s",
+                               sequence->bjid(), a_id.c_str(), a_sq_exception.what()
+            );
+        } catch (const ::cc::Exception& a_cc_exception) {
+            // ... copy exception ...
+            exception = new Sequencer::Exception(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+            // ... log it ...
+            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT "'%s': %s",
+                               sequence->bjid(), a_id.c_str(), a_cc_exception.what()
+            );
+        } catch (...) {
+            try {
+                ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
+            } catch (const ::cc::Exception& a_cc_exception) {
+                // ... copy exception ...
+                exception = new Sequencer::Exception(CC_TRACK_CALL(activity_it->second->sequence().bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                // ... log it ...
+                CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT "'%s': %s",
+                                   sequence->bjid(), a_id.c_str(), a_cc_exception.what()
+                );
+            }
+        }
+
+        // ... can't accept if no sequence is set ...
+        assert(nullptr != sequence);
+
+        // ... if an exception was thrown ...
+        if ( nullptr != exception ) {
+            //
+            Json::Value response = Json::Value::null;
+            // ... build response ..
+            SetFailedResponse(exception->code_, response);
+            // ... notify 'job finished' ...
+            FinalizeJob(*sequence, response);
+            // ... cleanup ...
+            delete sequence;
+            delete exception;
+        } else {
+            // ... cleanup ...
+            delete sequence;
+        }
+        
     }, /* a_blocking */ false);
-       
+    
     // ... we're done ..
     return nullptr;
 }
@@ -1241,6 +1283,49 @@ void casper::job::Sequencer::UntrackActivity (const casper::job::sequencer::Acti
 #endif
 
 /**
+ * @brief Call when the 'final' activity was performed so we close the job.
+ *
+ * @param a_sequence Sequence info.
+ * @param a_response Job response.
+ */
+void casper::job::Sequencer::FinalizeJob (const casper::job::sequencer::Sequence& a_sequence,
+                                          const Json::Value& a_response)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    //
+    // ... Notify 'deferred' JOB finalization ...
+    //
+    const std::string response_str = json_styled_writer_.write(a_response);
+    
+    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> status: %s", a_sequence.bjid(), a_response["status"].asCString());
+            
+    // ... publish result ...
+    Finished(/* a_id               */ a_sequence.bjid(),
+             /* a_channel          */ a_sequence.rcid(),
+             /* a_response         */ a_response,
+             /* a_success_callback */
+             [this, &a_sequence , &response_str]() {
+                CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> response:\n%s", a_sequence.bjid(), response_str.c_str());
+             },
+             /* a_failure_callback */
+             [this, &a_sequence ](const ev::Exception& a_ev_exception){
+                CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~> exception: %s", a_sequence.bjid(), a_ev_exception.what());
+                (void)(a_ev_exception);
+            }
+    );
+    
+    // ... log status ...
+    EV_LOOP_BEANSTALK_JOB_LOG_QUEUE("STATUS", "%s",
+                                    a_response["status"].asCString()
+    );
+}
+
+#ifdef __APPLE__
+#pragma mark -
+#endif
+
+/**
  * @brief Execute a PostgreSQL a batch of queries and wait for it's response.
  *
  * @param a_tracking Call tracking proposes.
@@ -1342,7 +1427,7 @@ void casper::job::Sequencer::ExecuteQueryAndWait (const casper::job::Sequencer::
     
     // ... if errors count changed
     if ( ErrorsCount() != ec ) {
-        throw casper::job::Sequencer::JumpErrorAlreadySet(a_tracking, /* a_code */ 500, LastError()["why"].asCString());
+        throw JumpErrorAlreadySet(a_tracking, /* a_code */ 500, LastError()["why"].asCString());
     }
 }
 
@@ -1491,7 +1576,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::Sequencer::Tracki
     
     // ... data must be previously set on DB ...
     if ( true == object.isNull() ) {
-        throw casper::job::Sequencer::Exception(a_tracking, /* a_code */ 500, "No data available for this activity ( from db )!");
+        throw Sequencer::Exception(a_tracking, /* a_code */ 500, "No data available for this activity ( from db )!");
     }
     
     //

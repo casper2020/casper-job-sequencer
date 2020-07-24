@@ -197,7 +197,13 @@ namespace casper
             void                                             TrackActivity                 (sequencer::Activity* a_activity);
             
             void                                             UntrackActivity               (const sequencer::Activity& a_activity);
-                        
+
+            //
+            // JOB
+            //
+            void                                            FinalizeJob                    (const sequencer::Sequence& a_sequence,
+                                                                                            const Json::Value& a_response);
+            
             //
             // POSTGRESQL
             //
