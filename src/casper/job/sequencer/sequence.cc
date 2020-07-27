@@ -36,7 +36,7 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
                                             const uint64_t& a_cid, const int64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid)
     : source_(a_source), cid_(a_cid), bjid_(a_bjid),
-      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid)
+      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid), count_(0)
 {
     /* empty */
 }
@@ -57,7 +57,7 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
                                             const uint64_t& a_cid, const int64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did)
     : source_(a_source), cid_(a_cid), bjid_(a_bjid),
-      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid), did_(a_did)
+      rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rcid), rcid_(a_rcid), did_(a_did), count_(0)
 {
     /* empty */
 }
@@ -77,6 +77,7 @@ casper::job::sequencer::Sequence::Sequence (const casper::job::sequencer::Sequen
     rjid_   = a_sequence.rjid_;
     rcid_   = a_sequence.rcid_;
     did_    = a_sequence.did_;
+    count_  = a_sequence.count_;
 }
 /**
  * @brief Destructor.

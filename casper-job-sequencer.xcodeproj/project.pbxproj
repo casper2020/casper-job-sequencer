@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		474473F224CEDF98000ADE2D /* recovery.cc in Sources */ = {isa = PBXBuildFile; fileRef = 474473F124CEDF98000ADE2D /* recovery.cc */; };
+		474473F524CEE40E000ADE2D /* live.cc in Sources */ = {isa = PBXBuildFile; fileRef = 474473F324CEE40E000ADE2D /* live.cc */; };
 		477C56EF24A4E9ED0048A67D /* script.cc in Sources */ = {isa = PBXBuildFile; fileRef = 477C56EB24A4E9ED0048A67D /* script.cc */; };
 		47EF3FDC248A44A20094608D /* activity.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47EF3FD8248A44A20094608D /* activity.cc */; };
 		47EF3FE1248A49200094608D /* sequence.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47EF3FE0248A49200094608D /* sequence.cc */; };
@@ -121,11 +123,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		474473F024CEDF98000ADE2D /* recovery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = recovery.h; path = src/casper/job/recovery.h; sourceTree = SOURCE_ROOT; };
+		474473F124CEDF98000ADE2D /* recovery.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = recovery.cc; path = src/casper/job/recovery.cc; sourceTree = SOURCE_ROOT; };
+		474473F324CEE40E000ADE2D /* live.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = live.cc; sourceTree = "<group>"; };
+		474473F424CEE40E000ADE2D /* live.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = live.h; sourceTree = "<group>"; };
+		474473F824CEE854000ADE2D /* status.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
+		474473FA24CEE8B9000ADE2D /* exception.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = exception.h; sourceTree = "<group>"; };
 		477C56EB24A4E9ED0048A67D /* script.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = script.cc; sourceTree = "<group>"; };
 		477C56EC24A4E9ED0048A67D /* script.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = script.h; sourceTree = "<group>"; };
 		47EF3FD8248A44A20094608D /* activity.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = activity.cc; sourceTree = "<group>"; };
 		47EF3FD9248A44A20094608D /* activity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = activity.h; sourceTree = "<group>"; };
-		47EF3FDD248A46850094608D /* status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
 		47EF3FDF248A48C30094608D /* sequence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence.h; sourceTree = "<group>"; };
 		47EF3FE0248A49200094608D /* sequence.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sequence.cc; sourceTree = "<group>"; };
 		47F37F722484FAB600493361 /* casper-job-sequencer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "casper-job-sequencer"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -177,7 +184,8 @@
 			isa = PBXGroup;
 			children = (
 				477C56EA24A4E9ED0048A67D /* v8 */,
-				47EF3FDD248A46850094608D /* status.h */,
+				474473F824CEE854000ADE2D /* status.h */,
+				474473FA24CEE8B9000ADE2D /* exception.h */,
 				47EF3FDF248A48C30094608D /* sequence.h */,
 				47EF3FE0248A49200094608D /* sequence.cc */,
 				47EF3FD9248A44A20094608D /* activity.h */,
@@ -314,6 +322,10 @@
 				47EF3FD7248A44A20094608D /* sequencer */,
 				47F37FEC2484FFA000493361 /* sequencer.h */,
 				47F37FEA2484FF7800493361 /* sequencer.cc */,
+				474473F424CEE40E000ADE2D /* live.h */,
+				474473F324CEE40E000ADE2D /* live.cc */,
+				474473F024CEDF98000ADE2D /* recovery.h */,
+				474473F124CEDF98000ADE2D /* recovery.cc */,
 			);
 			path = job;
 			sourceTree = "<group>";
@@ -457,9 +469,11 @@
 				47EF3FDC248A44A20094608D /* activity.cc in Sources */,
 				47EF3FE1248A49200094608D /* sequence.cc in Sources */,
 				47F37F882484FC5500493361 /* Makefile in Sources */,
+				474473F524CEE40E000ADE2D /* live.cc in Sources */,
 				47F37FEB2484FF7800493361 /* sequencer.cc in Sources */,
 				477C56EF24A4E9ED0048A67D /* script.cc in Sources */,
 				47F37F7F2484FADB00493361 /* main.cc in Sources */,
+				474473F224CEDF98000ADE2D /* recovery.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

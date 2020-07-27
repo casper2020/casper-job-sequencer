@@ -62,6 +62,7 @@ namespace casper
                 std::string rjid_;   //!< REDIS job key.
                 std::string rcid_;   //!< REDIS job channel.
                 std::string did_ ;   //!< DB id ( form table js.sequences[id] as string ).
+                size_t      count_;  //!< NUMBER of activites related to this sequence.
 
             public: // Constructor(s) / Destructor
                 Sequence () = delete;
@@ -86,8 +87,9 @@ namespace casper
                 const std::string& rjid   () const;
                 const std::string& rcid   () const;
                 const std::string& did    () const;
+                const size_t&      count  () const;
                 
-                void               SetDID(const std::string& a_id);
+                void               Bind    (const std::string& a_id, const size_t& a_count);
 
             }; // end of class 'Sequence'
         
@@ -108,6 +110,7 @@ namespace casper
                 rjid_   = a_sequence.rjid_;
                 rcid_   = a_sequence.rcid_;
                 did_    = a_sequence.did_;
+                count_  = a_sequence.count_;
                 return *this;
             }
         
@@ -176,13 +179,23 @@ namespace casper
             }
         
             /**
-             * @brief Set DB id.
+             * @return Number of activites related to this sequence.
+             */
+            inline const size_t& Sequence::count () const
+            {
+                return count_;
+            }
+        
+            /**
+             * @brief Set DB id and number of activites related to this sequence..
              *
              * @param a_id DB id as string.
+             * @param a_count number of activites related to this sequence.
              */
-            inline void Sequence::SetDID (const std::string& a_id)
+            inline void Sequence::Bind (const std::string& a_id, const size_t& a_count)
             {
-                did_ = a_id;
+                did_   = a_id;
+                count_ = a_count;
             }
         
        } // end of namespace 'sequencer'
