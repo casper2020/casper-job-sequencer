@@ -44,15 +44,17 @@ namespace casper
     
         class Sequencer : public cc::job::easy::Job
         {
-            
-#define SEQUENCER_LOG_ACTIVITY(a_activity, a_format, ...) \
-    CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT " ~= ACTIVITY #" SIZET_FMT "/" SIZET_FMT ": " a_format, \
-                           a_activity.sequence().bjid(), ( a_activity.index() + 1 ), a_activity.sequence().count(), __VA_ARGS__ \
+                        
+#define SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, a_format, ...) \
+    CC_JOB_LOG(a_level, a_sequence.bjid(), \
+                CC_JOB_LOG_COLOR(LIGHT_BLUE) "SEQUENCE" CC_LOGS_LOGGER_RESET_ATTRS ": %-6.6s, " a_format, \
+                a_step, __VA_ARGS__ \
     );
 
-#define SEQUENCER_LOG_SEQUENCE(a_sequence, a_direction, a_format, ...) \
-    CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT " " a_direction " SEQUENCE #%-3s: " a_format, \
-                            a_sequence.bjid(), a_sequence.did().c_str(), __VA_ARGS__ \
+#define SEQUENCER_LOG_ACTIVITY(a_level, a_activity, a_step, a_format, ...) \
+    CC_JOB_LOG(a_level, a_activity.sequence().bjid(), \
+               CC_JOB_LOG_COLOR(WHITE) "ACTIVITY" CC_LOGS_LOGGER_RESET_ATTRS ": %-6.6s, { " SIZET_FMT "/" SIZET_FMT " } " a_format, \
+               a_step, ( a_activity.index() + 1 ), a_activity.sequence().count(), __VA_ARGS__ \
     );
 
         public: // Static Const Data
@@ -72,6 +74,10 @@ namespace casper
             
             std::map<std::string, sequencer::Activity*> running_activities_; //!< RCID ( REDIS Channel ID ) -> Activity
             casper::job::sequencer::v8::Script*         script_;
+            
+        private: // Data ( TO BE USED ONLY ON 'THIS' THREAD CONTEXT )
+            
+            Json::FastWriter jfw_;
 
         public: // Constructor(s) / Destructor
             
@@ -79,7 +85,7 @@ namespace casper
             Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config);
             virtual ~Sequencer ();
 
-        public: // Inherited Virtual Method(s) / Function(s) - from cc::job::easy::Runnable
+        protected: // Inherited Virtual Method(s) / Function(s) - from cc::job::easy::Runnable
             
             virtual void Setup ();
 
@@ -151,12 +157,25 @@ namespace casper
         protected: // Inline Method(s) // Function(s)
             
             const cc::debug::Threading::ThreadID thread_id () const;
+            void                                 LogStats () const;
 
         }; // end of class 'Sequencer'
     
         inline const cc::debug::Threading::ThreadID Sequencer::thread_id () const
         {
             return thread_id_;
+        }
+    
+        /**
+         * @brief Log some statistics.
+         */
+        inline void Sequencer::LogStats () const
+        {
+            CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+            owner_log_callback_(tube_.c_str(),
+                                "STATS",
+                                std::to_string(running_activities_.size()) + " " + ( 1 == running_activities_.size()  ? "activity is"  : "activities are" ) + " running"
+            );
         }
               
     } // end of namespace 'job'

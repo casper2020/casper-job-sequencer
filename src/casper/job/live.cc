@@ -189,11 +189,11 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         // ... set response code ...
         o_response.code_ = a_exception.code_;
         // ... debug ...
-        CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
-                           a_exception.tracking_.bjid_,
-                           a_exception.tracking_.function_.c_str(), a_exception.tracking_.line_,
-                           a_exception.tracking_.action_.c_str(),
-                           a_exception.what()
+        CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
+                         a_exception.tracking_.bjid_,
+                         a_exception.tracking_.function_.c_str(), a_exception.tracking_.line_,
+                         a_exception.tracking_.action_.c_str(),
+                         a_exception.what()
         );
     }
     

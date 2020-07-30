@@ -57,8 +57,9 @@ casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable:
     : cc::job::easy::Job(a_loggable_data, a_tube, a_config),
       thread_id_(cc::debug::Threading::GetInstance().CurrentThreadID())
 {
-    json_writer_.omitEndingLineFeed();
-    script_ = nullptr;
+    jfw_.omitEndingLineFeed();
+    script_    = nullptr;
+    log_level_ = static_cast<size_t>(std::max((int)a_config.log_level_, (int)log_level_));
 }
 
 /**
@@ -117,7 +118,7 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(a_sequence, "~=", "%s", "registering");
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_sequence, CC_JOB_LOG_STEP_IN, "%s", "registering");
     
     //
     // FORMAT:
@@ -170,8 +171,9 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     );
     
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(a_sequence, "~=", "registered "  SIZET_FMT " %s",
-                       a_sequence.count(), ( a_sequence.count() == 1 ? "actitity" : "activities" )
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_sequence, CC_JOB_LOG_STEP_POSGRESQL, "registered with ID %s, " SIZET_FMT " %s",
+                           a_sequence.did().c_str(),
+                           a_sequence.count(), ( a_sequence.count() == 1 ? "actitity" : "activities" )
     );
 
     CC_WARNING_TODO("CJS: inner jobs defaults by config");
@@ -205,7 +207,7 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     const auto& sequence = a_activity.sequence();
 
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(sequence, "~=", "finalizing ( " SIZET_FMT " / " SIZET_FMT " %s )", \
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, "STEP", "finalizing ( " SIZET_FMT " / " SIZET_FMT " %s )", \
                            ( a_activity.index() + 1 ), sequence.count(), ( sequence.count() == 1 ? "actitity" : "activities" )
     );
 
@@ -231,7 +233,7 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     );
     
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(sequence, "~=", "finalized ( " SIZET_FMT " / " SIZET_FMT " %s )",
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_STEP, "finalized ( " SIZET_FMT " / " SIZET_FMT " %s )",
                           ( a_activity.index() + 1 ), sequence.count(), ( sequence.count() == 1 ? "actitity" : "activities" )
     );
     
@@ -239,18 +241,34 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     ss << a_activity.status();
 
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(sequence, "~>", "status is %s",
-                           ss.str().c_str()
-    );
+    if ( sequencer::Status::Done == a_activity.status() ) {
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_STATUS, CC_JOB_LOG_COLOR(GREEN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ss.str().c_str()
+        );
+    } else {
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_STATUS, CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ss.str().c_str()
+        );
+    }
+        
+    // ... log ...
+    if ( sequencer::Status::Done == a_activity.status() ) {
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "response: " CC_JOB_LOG_COLOR(GREEN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               jfw_.write(a_response).c_str()
+        );
+    } else if ( sequencer::Status::Failed == a_activity.status() ) {
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "response: " CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               jfw_.write(a_response).c_str()
+        );
+    } else {
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "response: " CC_JOB_LOG_COLOR(ORANGE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               jfw_.write(a_response).c_str()
+        );
+    }
     
     // ... log ...
-    SEQUENCER_LOG_SEQUENCE(sequence, "~>", "rtt was " DOUBLE_FMT_D(0) "ms",
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_RTT, "rtt ~ " DOUBLE_FMT_D(0) "ms",
                             o_rtt
-    );
-    
-    // ... log ...
-    SEQUENCER_LOG_SEQUENCE(sequence, "~>", "response ~ %s",
-                           jw.write(a_response).c_str()
     );
 }
 
@@ -275,7 +293,8 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     const auto sequence = a_activity.sequence();
 
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "launching");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_STEP,
+                           "%s", "launching");
         
     const std::string seq_id_key = config_.service_id_ + ":jobs:sequential_id";
 
@@ -313,11 +332,6 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     job_defs.key_        = ( config_.service_id_ + ":jobs:" + job_defs.tube_ + ':' );
     job_defs.channel_    = ( config_.service_id_ + ':' + job_defs.tube_ + ':'      );
     job_defs.sc_         = 500;
-
-    // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "payload \n\n%s",
-                           a_activity.payload().toStyledString().c_str()
-    );
     
     // ...
     osal::ConditionVariable cv;
@@ -433,7 +447,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
                            sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
         );
         // ... debug only ..
-        CC_DEBUG_LOG_TRACE("job", "before patch:\n%s",  payload.toStyledString().c_str());
+        CC_DEBUG_LOG_TRACE("job", "before patch: %s",  jfw_.write(payload).c_str());
         // ... set or overwrite 'id' and 'tube' properties ...
         payload["id"]   = job_defs.id_;
         payload["tube"] = job_defs.tube_;
@@ -444,7 +458,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             payload["validity"] = job_defs.expires_in_;
         }
         // ... debug only ...
-        CC_DEBUG_LOG_TRACE("job", "after patch:\n%s",  payload.toStyledString().c_str());
+        CC_DEBUG_LOG_TRACE("job", "after patch: %s",  jfw_.write(payload).c_str());
         // ... log ...
         CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= patched job #" SIZET_FMT " - %s",
                            sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
@@ -484,7 +498,8 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         // ... and this activity ...
         UntrackActivity(a_activity); // ... ⚠️  a_activity STILL valid - it's the original one! ⚠️ ...
         // ... log ...
-        SEQUENCER_LOG_ACTIVITY(a_activity, "an error occurred while launching activity ~ %s",
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_ERR, a_activity, CC_JOB_LOG_STEP_EXCEPTION,
+                               "an error occurred while launching activity ~ %s",
                                exception->what()
         );
         // ... if at 'run' function ...
@@ -525,7 +540,8 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     a_activity.SetPayload(Json::Value::null);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "launched ~ %s", a_activity.rcid().c_str());
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                           "launched ~ %s", a_activity.rcid().c_str());
     
     // ... we're done ...
     return job_defs.sc_;
@@ -548,9 +564,10 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     const std::string src_channel_key = a_activity.rcid();
     const std::string dst_channel_key = a_activity.sequence().rcid();
 
-    // ... debug ...
-    CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= ACTIVITY #" SIZET_FMT ": relay message from %s to %s\n\n%s\n",
-                       a_activity.sequence().bjid(), ( a_activity.index() + 1 ), src_channel_key.c_str(), dst_channel_key.c_str(), a_message.toStyledString().c_str()
+    // ... log ...
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_RELAY,
+                           CC_JOB_LOG_COLOR(YELLOW) "relay message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                           src_channel_key.c_str(), dst_channel_key.c_str(), jfw_.write(a_message).c_str()
     );
         
     try {
@@ -560,9 +577,11 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
             ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
         } catch (const ::cc::Exception& a_cc_exception) {
             CC_WARNING_TODO("CJS: HANDLE EXCEPTION");
-            // ... debug ...
-            CC_DEBUG_LOG_TRACE("job",  "Job #" INT64_FMT " ~= ACTIVITY #" SIZET_FMT ": FAILED to relay message from %s to %s\n\n%s\n",
-                               a_activity.sequence().bjid(), ( a_activity.index() + 1 ), src_channel_key.c_str(), dst_channel_key.c_str(), a_cc_exception.what()
+            // ... log ...
+            SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_WRN, a_activity, CC_JOB_LOG_STEP_RELAY,
+                                   CC_JOB_LOG_COLOR(RED) "failed to relay message"
+                                        CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                   src_channel_key.c_str(), dst_channel_key.c_str(), a_cc_exception.what()
             );
         }
     }
@@ -582,8 +601,29 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Tra
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
+    std::stringstream ss ; ss << a_activity.status();
+    
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "returned");
+    if ( sequencer::Status::Done == a_activity.status() ) {
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "returned, status is " CC_JOB_LOG_COLOR(GREEN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ss.str().c_str()
+        );
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "response was: " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ( nullptr != a_response ? jfw_.write(*a_response).c_str() : "<empty>" )
+        );
+    } else {
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "returned, status is " CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ss.str().c_str()
+        );
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_ERR, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "response was: " CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               ( nullptr != a_response ? jfw_.write(*a_response).c_str() : "<empty>" )
+        );
+    }
+    
     
     // ... prepare next activity ...
     sequencer::Activity next = sequencer::Activity(/* a_sequence */ a_activity.sequence(), /* a_id */ a_activity.did(), /* a_index */ a_activity.index(), /* a_attempt */ 0);
@@ -653,7 +693,8 @@ void casper::job::Sequencer::RegisterActivity (const casper::job::sequencer::Act
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "registering");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_POSGRESQL,
+                           "%s", "registering");
 
     //
     // FORMAT:
@@ -692,7 +733,8 @@ void casper::job::Sequencer::RegisterActivity (const casper::job::sequencer::Act
     );
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "registered with ID %s",
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_POSGRESQL,
+                           "registered with ID %s",
                            a_activity.did().c_str()
     );
 }
@@ -712,7 +754,8 @@ void casper::job::Sequencer::SubscribeActivity (const casper::job::sequencer::Ac
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "subscribing to channel '%s'",
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_REDIS,
+                           "subscribing to channel '%s'",
                            a_activity.rcid().c_str()
     );
 
@@ -725,7 +768,8 @@ void casper::job::Sequencer::SubscribeActivity (const casper::job::sequencer::Ac
                 // ... subscribed?
                 if ( ::ev::redis::subscriptions::Manager::Status::Subscribed == a_status ) {
                     // ... log ...
-                    SEQUENCER_LOG_ACTIVITY(a_activity, "subscribed to channel '%s'",
+                    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_REDIS,
+                                           "subscribed to channel '%s'",
                                            a_activity.rcid().c_str()
                     );
                     // ... we're done ...
@@ -830,26 +874,26 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
             // ... copy exception ...
             exception = new sequencer::JumpErrorAlreadySet(a_jp_exception);
             // ... log it ...
-            CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
-                               a_jp_exception.tracking_.bjid_,
-                               a_jp_exception.tracking_.function_.c_str(), a_jp_exception.tracking_.line_,
-                               a_jp_exception.tracking_.action_.c_str(),
-                               a_jp_exception.what()
+            CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
+                             a_jp_exception.tracking_.bjid_,
+                             a_jp_exception.tracking_.function_.c_str(), a_jp_exception.tracking_.line_,
+                             a_jp_exception.tracking_.action_.c_str(),
+                             a_jp_exception.what()
             );
         
         } catch (const sequencer::Exception& a_sq_exception) {
             // ... copy exception ...
             exception = new sequencer::Exception(a_sq_exception);
             // ... log it ...
-            CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT "'%s': %s",
-                               sequence->bjid(), a_id.c_str(), a_sq_exception.what()
+            CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
+                             sequence->bjid(), a_id.c_str(), a_sq_exception.what()
             );
         } catch (const ::cc::Exception& a_cc_exception) {
             // ... copy exception ...
             exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(activity_it->second->sequence().bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
             // ... log it ...
-            CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT "'%s': %s",
-                               sequence->bjid(), a_id.c_str(), a_cc_exception.what()
+            CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
+                             sequence->bjid(), a_id.c_str(), a_cc_exception.what()
             );
         } catch (...) {
             try {
@@ -858,8 +902,8 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 // ... copy exception ...
                 exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(activity_it->second->sequence().bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
                 // ... log it ...
-                CC_JOB_DEBUG_LOG_TRACE("Job #" INT64_FMT "'%s': %s",
-                                   sequence->bjid(), a_id.c_str(), a_cc_exception.what()
+                CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
+                                 sequence->bjid(), a_id.c_str(), a_cc_exception.what()
                 );
             }
         }
@@ -899,7 +943,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "unsubscribing from channel '%s'",
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_REDIS,
+                           "unsubscribing from channel '%s'",
                            a_activity.rcid().c_str()
     );
 
@@ -911,7 +956,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
             [this,  &a_activity, &cv](const std::string& a_id, const ::ev::redis::subscriptions::Manager::Status& a_status) -> EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK {
                 if ( ::ev::redis::subscriptions::Manager::Status::Unsubscribed == a_status ) {
                     // ... log ...
-                    SEQUENCER_LOG_ACTIVITY(a_activity, "unsubscribed from channel '%s'",
+                    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_REDIS,
+                                           "unsubscribed from channel '%s'",
                                            a_activity.rcid().c_str()
                     );
                     // ... we're done ...
@@ -942,7 +988,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "pushing to beanstalkd");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_BEANSTALK,
+                           "%s", "pushing to beanstalkd");
     
     Json::FastWriter jw; jw.omitEndingLineFeed();
     
@@ -950,7 +997,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     PushJob(a_activity.payload()["tube"].asString(), jw.write(a_activity.payload()), a_activity.ttr());
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "pushed to beanstalkd");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_BEANSTALK,
+                           "%s", "pushed to beanstalkd");
 }
 
 /**
@@ -1010,7 +1058,8 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
     ss << ");";
   
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "registering finalization");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_POSGRESQL,
+                           "%s", "registering finalization");
     
     // ... execute query ...
     ExecuteQueryAndWait(/* a_tracking         */ SEQUENCER_TRACK_CALL(a_activity.sequence().bjid(), "FINALIZING ACTIVITY"),
@@ -1030,7 +1079,8 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
     );
         
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "finalization registered");
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_POSGRESQL,
+                            "%s", "finalization registered");
     
     // ... based on a_response, set activity status ...
     if ( nullptr == a_response ) {
@@ -1077,10 +1127,12 @@ void casper::job::Sequencer::TrackActivity (const casper::job::sequencer::Activi
     running_activities_[a_activity.rcid()] = new casper::job::sequencer::Activity(a_activity);
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "tracked ( " SIZET_FMT " %s running )",
-                           running_activities_.size(),
-                           ( 1 == running_activities_.size()  ? "activity is"  : "activities are" )
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                           "%s", "tracked"
     );
+    
+    // ... log ...
+    LogStats();
 }
 
 /**
@@ -1097,10 +1149,12 @@ void casper::job::Sequencer::TrackActivity (casper::job::sequencer::Activity* a_
     running_activities_[a_activity->rcid()] = a_activity;
 
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY((*a_activity), "tracked ( " SIZET_FMT " %s running )",
-                           running_activities_.size(),
-                           ( 1 == running_activities_.size()  ? "activity is"  : "activities are" )
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, (*a_activity), CC_JOB_LOG_STEP_STEP,
+                           "%s", "tracked"
     );
+    
+    // ... log ...
+    LogStats();
 }
 
 /**
@@ -1121,10 +1175,12 @@ void casper::job::Sequencer::UntrackActivity (const casper::job::sequencer::Acti
     }
 
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "untracked ( " SIZET_FMT " %s running )",
-                           running_activities_.size(),
-                           ( 1 == running_activities_.size()  ? "activity is"  : "activities are" )
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                           "%s", "untracked"
     );
+    
+    // ... log ...
+    LogStats();
 }
 
 #ifdef __APPLE__
@@ -1434,15 +1490,18 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     try {
         
         // ... log ...
-        SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "loading V8 data object");
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_V8,
+                               "%s", "loading data object");
         if ( 0 == a_activity.index() ) {
             // ... log ...
-            SEQUENCER_LOG_ACTIVITY(a_activity, "V8 data object\n%s",
-                                   object.toStyledString().c_str()
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_activity.sequence(), CC_JOB_LOG_STEP_V8,
+                                   "data object: " CC_JOB_LOG_COLOR(LIGHT_BLUE) "%s" CC_LOGS_LOGGER_RESET_ATTRS "-",
+                                   jfw_.write(object).c_str()
             );
         } else {
             // ... log ...
-            SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "V8 data object ~ <dump skipped>");
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_VBS, a_activity.sequence(), CC_JOB_LOG_STEP_V8,
+                                   "%s", "data object ~ <dump skipped>");
         }
 
         // ... set v8 value ...
@@ -1455,7 +1514,8 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
         );
 
         // ... log ...
-        SEQUENCER_LOG_ACTIVITY(a_activity, "%s", "V8 data object loaded");
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_V8,
+                               "%s", "data object loaded");
 
     } catch (const ::cc::v8::Exception& a_v8e) {
         throw sequencer::V8ExpressionEvaluationException(a_tracking, a_v8e);
@@ -1464,8 +1524,9 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     Json::Value payload = a_activity.payload();
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "patching payload\n\n%s",
-                           payload.toStyledString().c_str()
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_V8,
+                           "patching payload: " CC_JOB_LOG_COLOR(WHITE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                           jfw_.write(payload).c_str()
     );
     
     // ... traverse JSON and evaluate 'String' fields ...
@@ -1481,8 +1542,9 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     });
     
     // ... log ...
-    SEQUENCER_LOG_ACTIVITY(a_activity, "payload patched\n\n%s",
-                           payload.toStyledString().c_str()
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_V8,
+                           "payload patched: " CC_JOB_LOG_COLOR(LIGHT_CYAN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                           jfw_.write(payload).c_str()
     );
 
     // ... set patched payload as activity new payload ....
