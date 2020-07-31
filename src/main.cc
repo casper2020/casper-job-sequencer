@@ -38,15 +38,21 @@
  */
 int main(int argc, char** argv)
 {
+    const char* short_info = strrchr(CASPER_JOB_SEQUENCER_INFO, '-');
+    if ( nullptr == short_info ) {
+        short_info = CASPER_JOB_SEQUENCER_INFO;
+    } else {
+        short_info++;
+    }
     cc::job::easy::Handler::GetInstance().Start(
         /* a_arguments */
         {
-            /* abbr_           */ CASPER_JON_SEQUENCER_ABBR,
-            /* name_           */ CASPER_JON_SEQUENCER_NAME,
-            /* version_        */ CASPER_JON_SEQUENCER_VERSION,
-            /* rel_date_       */ CASPER_JON_SEQUENCER_VERSION,
-            /* info_           */ CASPER_JON_SEQUENCER_INFO,
-            /* banner_         */ CASPER_JON_SEQUENCER_BANNER,
+            /* abbr_           */ CASPER_JOB_SEQUENCER_ABBR,
+            /* name_           */ CASPER_JOB_SEQUENCER_NAME,
+            /* version_        */ CASPER_JOB_SEQUENCER_VERSION,
+            /* rel_date_       */ CASPER_JOB_SEQUENCER_VERSION,
+            /* info_           */ short_info, // short version of CASPER_JOB_SEQUENCER_INFO
+            /* banner_         */ CASPER_JOB_SEQUENCER_BANNER,
             /* argc_           */ argc,
             /* argv_           */ const_cast<const char** const >(argv),
         },

@@ -19,34 +19,34 @@
  * along with casper-job-sequencer.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
-#ifndef CASPER_JON_SEQUENCER_VERSION_H_
-#define CASPER_JON_SEQUENCER_VERSION_H_
+#ifndef CASPER_JOB_SEQUENCER_VERSION_H_
+#define CASPER_JOB_SEQUENCER_VERSION_H_
 
-#ifndef CASPER_JON_SEQUENCER_ABBR
-#define CASPER_JON_SEQUENCER_ABBR "cjs"
+#ifndef CASPER_JOB_SEQUENCER_ABBR
+#define CASPER_JOB_SEQUENCER_ABBR "cjs"
 #endif
 
-#ifndef CASPER_JON_SEQUENCER_NAME
-#define CASPER_JON_SEQUENCER_NAME "casper-job-sequencer@b.n.s@"
+#ifndef CASPER_JOB_SEQUENCER_NAME
+#define CASPER_JOB_SEQUENCER_NAME "casper-job-sequencer@b.n.s@"
 #endif
 
-#ifndef CASPER_JON_SEQUENCER_VERSION
-#define CASPER_JON_SEQUENCER_VERSION "x.x.x"
+#ifndef CASPER_JOB_SEQUENCER_VERSION
+#define CASPER_JOB_SEQUENCER_VERSION "x.x.x"
 #endif
 
-#ifndef CASPER_JON_SEQUENCER_REL_DATE
-#define CASPER_JON_SEQUENCER_REL_DATE "d.d.d"
+#ifndef CASPER_JOB_SEQUENCER_REL_DATE
+#define CASPER_JOB_SEQUENCER_REL_DATE "d.d.d"
 #endif
 
-#ifndef CASPER_JON_SEQUENCER_INFO
-#define CASPER_JON_SEQUENCER_INFO CASPER_JON_SEQUENCER_NAME " v" CASPER_JON_SEQUENCER_VERSION
+#ifndef CASPER_JOB_SEQUENCER_INFO
+#define CASPER_JOB_SEQUENCER_INFO CASPER_JOB_SEQUENCER_NAME " v" CASPER_JOB_SEQUENCER_VERSION
 #endif
 
-#define CASPER_JON_SEQUENCER_BANNER \
+#define CASPER_JOB_SEQUENCER_BANNER \
   "   ____    _    ____  ____  _____ ____        _  ___  ____    ____  _____ ___  _   _ _____ _   _  ____ _____ ____  " \
   "\n  / ___|  / \\  / ___||  _ \\| ____|  _ \\      | |/ _ \\| __ )  / ___|| ____/ _ \\| | | | ____| \\ | |/ ___| ____|  _ \\ " \
   "\n | |     / _ \\ \\___ \\| |_) |  _| | |_) |  _  | | | | |  _ \\  \\___ \\|  _|| | | | | | |  _| |  \\| | |   |  _| | |_) |" \
   "\n | |___ / ___ \\ ___) |  __/| |___|  _ <  | |_| | |_| | |_) |  ___) | |__| |_| | |_| | |___| |\\  | |___| |___|  _ < " \
   "\n  \\____/_/   \\_\\____/|_|   |_____|_| \\_\\  \\___/ \\___/|____/  |____/|_____\\__\\_\\\\___/|_____|_| \\_|\\____|_____|_| \\_\\"
 
-#endif // CASPER_JON_SEQUENCER_VERSION_H_
+#endif // CASPER_JOB_SEQUENCER_VERSION_H_
