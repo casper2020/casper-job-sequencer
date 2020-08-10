@@ -77,7 +77,8 @@ namespace casper
             
         private: // Data ( TO BE USED ONLY ON 'THIS' THREAD CONTEXT )
             
-            Json::FastWriter jfw_;
+            Json::FastWriter   jfw_;
+            Json::StyledWriter jsw_;
 
         public: // Constructor(s) / Destructor
             

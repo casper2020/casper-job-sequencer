@@ -32,7 +32,7 @@ CC_WARNING_TODO("CJS: review all comments and parameters names");
 CC_WARNING_TODO("CJS: WRITE SOME OF THE DEBUG MESSAGES TO PERMANENT LOG!!");
 CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread");
 
-CC_WARNING_TODO("CJS: REVIEW CC_DEBUG_LOG_TRACE(\"job\") USAGE")
+CC_WARNING_TODO("CJS: REVIEW CC_DEBUG_LOG_TRACE / CC_DEBUG_LOG_MSG (\"job\") USAGE")
 
 #ifdef __APPLE__
 #pragma mark - casper::job::Sequencer
@@ -443,11 +443,13 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         // .. first, copy payload ( so it can be patched ) ...
         Json::Value payload = job["payload"];
         // ... log ...
-        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= patching job #" SIZET_FMT " - %s",
+        CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= patching activity #" SIZET_FMT " - %s",
                            sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
         );
         // ... debug only ..
-        CC_DEBUG_LOG_TRACE("job", "before patch: %s",  jfw_.write(payload).c_str());
+        CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= before patch:\n%s",
+                         sequence.bjid(), jsw_.write(payload).c_str()
+        );
         // ... set or overwrite 'id' and 'tube' properties ...
         payload["id"]   = job_defs.id_;
         payload["tube"] = job_defs.tube_;
@@ -458,10 +460,12 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             payload["validity"] = job_defs.expires_in_;
         }
         // ... debug only ...
-        CC_DEBUG_LOG_TRACE("job", "after patch: %s",  jfw_.write(payload).c_str());
+        CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= after patch:\n%s",
+                         sequence.bjid(), jsw_.write(payload).c_str()
+        );
         // ... log ...
-        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= patched job #" SIZET_FMT " - %s",
-                           sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
+        CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= patched activity #" SIZET_FMT " - %s",
+                          sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
         );
         // ... tmp track payload, ttr and validity ...
         a_activity.SetPayload(payload);
@@ -805,18 +809,13 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
         sequencer::Exception* exception = nullptr;
 
         CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-        
-        // ... log ...
-        CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= received message from channel '%s': %s",
-                           static_cast<uint64_t>(0), a_id.c_str(), a_message.c_str()
-        );
-        
+
         // ... expecting message?
         const auto activity_it = running_activities_.find(a_id);
         if ( running_activities_.end() == activity_it ) {
             // ... log ...
-            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': %s",
-                               static_cast<uint64_t>(0), a_id.c_str(), "ignored"
+            CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= '%s': %s",
+                             static_cast<uint64_t>(0), a_id.c_str(), "ignored"
             );
             // ... not expected, we're done ...
             return;
@@ -831,8 +830,8 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
             
             // ... check this inner job status ...
             const std::string status = object.get("status", "").asCString();
-            CC_DEBUG_LOG_TRACE("job", "Job #" INT64_FMT " ~= '%s': status is %s",
-                               static_cast<uint64_t>(0), a_id.c_str(), status.c_str()
+            CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= '%s': status is %s",
+                             activity_it->second->sequence().bjid(), a_id.c_str(), status.c_str()
             );
             
             // ... interest in this status ( completed, failed or cancelled ) ?
@@ -1495,7 +1494,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
         if ( 0 == a_activity.index() ) {
             // ... log ...
             SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_activity.sequence(), CC_JOB_LOG_STEP_V8,
-                                   "data object: " CC_JOB_LOG_COLOR(LIGHT_BLUE) "%s" CC_LOGS_LOGGER_RESET_ATTRS "-",
+                                   "data object: " CC_JOB_LOG_COLOR(LIGHT_BLUE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
                                    jfw_.write(object).c_str()
             );
         } else {

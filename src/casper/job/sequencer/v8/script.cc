@@ -34,7 +34,6 @@
 const char* const casper::job::sequencer::v8::Script::k_evaluate_basic_expression_func_name_ = "_basic_expr_eval";
 const char* const casper::job::sequencer::v8::Script::k_evaluate_basic_expression_func_ =
 "function _basic_expr_eval(expr, $) {\n"
-"    _dump('test', $);"
 "    return eval(expr);\n"
 "}"
 ;
