@@ -65,6 +65,7 @@ namespace casper
                 size_t      count_;  //!< NUMBER of activites related to this sequence.
 
             public: // Constructor(s) / Destructor
+
                 Sequence () = delete;
                 Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid,
                           const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid);

@@ -44,6 +44,13 @@ int main(int argc, char** argv)
     } else {
         short_info++;
     }
+    
+    //
+    // LOG FILTERING:
+    //
+    // tail -f /usr/local/var/log/casper-job-sequencer/sequencer-live.1.log | grep -E ', .*(SEQUENCE|ACTIVITY).*:'
+    //
+    
     cc::job::easy::Handler::GetInstance().Start(
         /* a_arguments */
         {

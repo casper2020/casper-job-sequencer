@@ -129,6 +129,7 @@
 		474473F424CEE40E000ADE2D /* live.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = live.h; sourceTree = "<group>"; };
 		474473F824CEE854000ADE2D /* status.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
 		474473FA24CEE8B9000ADE2D /* exception.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = exception.h; sourceTree = "<group>"; };
+		4758D95D24E2AB1E00A77325 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		477C56EB24A4E9ED0048A67D /* script.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = script.cc; sourceTree = "<group>"; };
 		477C56EC24A4E9ED0048A67D /* script.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = script.h; sourceTree = "<group>"; };
 		47EF3FD8248A44A20094608D /* activity.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = activity.cc; sourceTree = "<group>"; };
@@ -184,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				477C56EA24A4E9ED0048A67D /* v8 */,
+				4758D95D24E2AB1E00A77325 /* config.h */,
 				474473F824CEE854000ADE2D /* status.h */,
 				474473FA24CEE8B9000ADE2D /* exception.h */,
 				47EF3FDF248A48C30094608D /* sequence.h */,
@@ -657,6 +659,7 @@
 			baseConfigurationReference = 47F37FAB2484FDBB00493361 /* debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",
@@ -702,6 +705,7 @@
 			baseConfigurationReference = 47F37FAC2484FDBB00493361 /* release.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../casper-packager/curl/darwin/pkg/$(CONFIGURATION)/curl/usr/local/casper/curl/include",

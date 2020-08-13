@@ -29,6 +29,7 @@
 #include "ev/postgresql/request.h"
 #include "ev/postgresql/value.h"
 
+#include "casper/job/sequencer/config.h"
 #include "casper/job/sequencer/exception.h"
 #include "casper/job/sequencer/activity.h"
 
@@ -44,17 +45,27 @@ namespace casper
     
         class Sequencer : public cc::job::easy::Job
         {
-                        
+
+#define SEQUENCER_LOG_KEY_JOB       "JOB"
+#define SEQUENCER_LOG_KEY_SEQUENCE  "SEQUENCE"
+#define SEQUENCER_LOG_KEY_ACTIVITY  "ACTIVITY"
+
 #define SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, a_format, ...) \
     CC_JOB_LOG(a_level, a_sequence.bjid(), \
-                CC_JOB_LOG_COLOR(LIGHT_BLUE) "SEQUENCE" CC_LOGS_LOGGER_RESET_ATTRS ": %-6.6s, " a_format, \
-                a_step, __VA_ARGS__ \
+                CC_JOB_LOG_COLOR(LIGHT_BLUE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                SEQUENCER_LOG_KEY_SEQUENCE , a_step, __VA_ARGS__ \
     );
 
 #define SEQUENCER_LOG_ACTIVITY(a_level, a_activity, a_step, a_format, ...) \
     CC_JOB_LOG(a_level, a_activity.sequence().bjid(), \
-               CC_JOB_LOG_COLOR(WHITE) "ACTIVITY" CC_LOGS_LOGGER_RESET_ATTRS ": %-6.6s, { " SIZET_FMT "/" SIZET_FMT " } " a_format, \
-               a_step, ( a_activity.index() + 1 ), a_activity.sequence().count(), __VA_ARGS__ \
+               CC_JOB_LOG_COLOR(WHITE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, { " SIZET_FMT "/" SIZET_FMT " } " a_format, \
+               SEQUENCER_LOG_KEY_ACTIVITY, a_step, ( a_activity.index() + 1 ), a_activity.sequence().count(), __VA_ARGS__ \
+    );
+
+#define SEQUENCER_LOG_JOB(a_level, a_bjid, a_step, a_format, ...) \
+    CC_JOB_LOG(a_level, a_bjid, \
+                CC_JOB_LOG_COLOR(MAGENTA) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                SEQUENCER_LOG_KEY_JOB, a_step, __VA_ARGS__ \
     );
 
         public: // Static Const Data
@@ -71,6 +82,9 @@ namespace casper
             const cc::debug::Threading::ThreadID thread_id_;
 
         private: // Data
+
+            sequencer::Config                           sequence_config_;
+            sequencer::Config                           activity_config_;
             
             std::map<std::string, sequencer::Activity*> running_activities_; //!< RCID ( REDIS Channel ID ) -> Activity
             casper::job::sequencer::v8::Script*         script_;
@@ -112,7 +126,7 @@ namespace casper
             void                                             SubscribeActivity             (const sequencer::Activity& a_activity);
             EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK OnActivityMessageReceived     (const std::string& a_id, const std::string& a_message);
             void                                             UnsubscribeActivity           (const sequencer::Activity& a_activity);
-            
+
             // BEANSTALKD
             void                                             PushActivity                  (const sequencer::Activity& a_activity);
 
@@ -123,6 +137,8 @@ namespace casper
             void                                             TrackActivity                 (sequencer::Activity* a_activity);
             
             void                                             UntrackActivity               (const sequencer::Activity& a_activity);
+            
+            void                                             OnActivityTimeout             (const std::string& a_rcid);
 
             //
             // JOB

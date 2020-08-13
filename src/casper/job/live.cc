@@ -94,9 +94,16 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
 
     // ... start as a 'bad request' ...
     o_response.code_ = 400;
-    
+
+    const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(a_id, "RUN JOB");
+
     // ... validate job payload ...
     CC_WARNING_TODO("CJS: validate job payload");
+    
+    // ... log status ...
+    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, tracking.bjid_, CC_JOB_LOG_STEP_IN, "%s", "Validating");
+
+    sequencer::Sequence* sequence = nullptr;
     
     try {
         
@@ -111,8 +118,6 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
             // ... direct from beanstalkd queue ...
             payload = &a_payload;
         }
-
-        const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(a_id, "RUN JOB");
         
         // ... register sequence and grab first activity ...
         try {
@@ -122,32 +127,22 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
             if ( 1 != sscanf(a_payload["id"].asCString(), "" UINT64_FMT, &rjnr ) ) {
                 throw sequencer::JSONValidationException(tracking, ( "Unable to parse job id from '" + a_payload["id"].asString() + "'!" ).c_str());
             }
-            
-            // ... grab external service id ...
-            // TODO REVIEW
-//            std::string service_id;
-//            try {
-//                service_id = GetJSONObject(a_payload, "service_id" , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
-//            } catch (const ev::Exception& a_ev_exception) {
-//                throw Sequencer::JSONValidationException(tracking, a_ev_exception.what());
-//            }
-            const std::string service_id = config_.service_id_;
 
             // ... create sequence from payload ...
-            auto sequence = casper::job::sequencer::Sequence(
-                                                             /* a_source */ ( true == a_payload.isMember("body") && true == a_payload.isMember("headers")
-                                                                                ? sequencer::Sequence::Source::Jobification
-                                                                                : sequencer::Sequence::Source::Default
-                                                             ),
-                                                             /* a_cid */  config_.instance_,
-                                                             /* a_bjid */ tracking.bjid_,
-                                                             /* a_rsid */ service_id,
-                                                             /* a_rjnr */ rjnr,
-                                                             /* a_rjid */ ( service_id + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
-                                                             /* a_rcid */ ( service_id + ':'      + tube_ + ':' + a_payload["id"].asString() )
+            sequence = new sequencer::Sequence(
+                                               /* a_source */ ( true == a_payload.isMember("body") && true == a_payload.isMember("headers")
+                                                               ? sequencer::Sequence::Source::Jobification
+                                                               : sequencer::Sequence::Source::Default
+                                                               ),
+                                               /* a_cid */  config_.instance(),
+                                               /* a_bjid */ tracking.bjid_,
+                                               /* a_rsid */ config_.service_id(),
+                                               /* a_rjnr */ rjnr,
+                                               /* a_rjid */ ( config_.service_id() + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
+                                               /* a_rcid */ ( config_.service_id() + ':'      + tube_ + ':' + a_payload["id"].asString() )
             );
             // ... register sequence ...
-            auto first_activity = RegisterSequence(sequence, *payload);
+            auto first_activity = RegisterSequence(*sequence, *payload);
             try {
                 // ... launch first activity ...
                 o_response.code_ = LaunchActivity(tracking, first_activity, /* a_at_run */ true);
@@ -186,8 +181,28 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         }
         
     } catch (const sequencer::JumpErrorAlreadySet& a_exception) {
+        
+        // ... log error ...
+        // TODO SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_ERR, a_sequence, CC_JOB_LOG_STEP_IN, "%s", a_ev_exception.what());
+
         // ... set response code ...
         o_response.code_ = a_exception.code_;
+
+        // ... log payload ...
+        SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_ERR, tracking.bjid_, CC_JOB_LOG_STEP_DUMP, "%s",
+                               json_writer_.write(a_payload).c_str()
+        );
+
+        // ... log exception ...
+        SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_ERR, tracking.bjid_, CC_JOB_LOG_STEP_ERROR, "%s", a_exception.what());
+
+        // ... log status ...
+        if ( nullptr != sequence ) {
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_ERR, (*sequence), CC_JOB_LOG_STEP_STATUS, CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                   "Rejected"
+            );
+        }
+                
         // ... debug ...
         CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT " ~= ERROR JUMP =~\n\nORIGIN: %s:%d\nACTION: %s\n\%s\n",
                          a_exception.tracking_.bjid_,
@@ -197,9 +212,19 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         );
     }
     
+    // ... release temporary allocated objects ...
+    if ( nullptr != sequence ) {
+        delete sequence;
+    }
+    
     // ... if scheduled, then the response must be deferred ...
     if ( 200 == o_response.code_ ) {
         // ... this will remove job from beanstalkd queue, but keeps the redis status as is ( in-progress ) ...
         SetDeferred();
+        // ... log status ...
+        SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, tracking.bjid_, CC_JOB_LOG_STEP_STATUS, CC_JOB_LOG_COLOR(GREEN) "%s" CC_LOGS_LOGGER_RESET_ATTRS, "Deferred");
+    } else {
+        // ... log status ...
+        SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, tracking.bjid_, CC_JOB_LOG_STEP_OUT, CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS, "Rejected");
     }
 }
