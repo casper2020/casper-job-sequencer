@@ -131,9 +131,9 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
             // ... create sequence from payload ...
             sequence = new sequencer::Sequence(
                                                /* a_source */ ( true == a_payload.isMember("body") && true == a_payload.isMember("headers")
-                                                               ? sequencer::Sequence::Source::Jobification
-                                                               : sequencer::Sequence::Source::Default
-                                                               ),
+                                                                ? sequencer::Sequence::Source::Jobification
+                                                                : sequencer::Sequence::Source::Default
+                                                              ),
                                                /* a_cid */  config_.instance(),
                                                /* a_bjid */ tracking.bjid_,
                                                /* a_rsid */ config_.service_id(),

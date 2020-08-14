@@ -97,6 +97,10 @@ void casper::job::Sequencer::Setup ()
     );
     // ... load it now ...
     script_->Load(/* a_external_scripts */ Json::Value::null, /* a_expressions */ {});
+    //
+    // SPECIAL CASE: we're interested in cancellation signals ( since we're running activites in sequence )
+    //
+    SetSignalsChannelListerer(std::bind(&casper::job::Sequencer::OnJobsSignalReceived, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 #ifdef __APPLE__
@@ -239,7 +243,7 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     const auto did      = GetJSONObject(activity, "id"      , Json::ValueType::intValue   , /* a_default */ nullptr).asString();
     const auto job      = GetJSONObject(activity, "job"     , Json::ValueType::objectValue, /* a_default */ nullptr);
     
-//    CC_WARNING_TODO("CJS: do we need this variable?");
+//    CC_WARNING_TODO("CJS: do we need this variable - used for validate 'tube' field existence ?");
 //    const auto tube     = GetJSONObject(job     , "tube"    , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
     
     const auto validity = GetJSONObject(job     , "validity", Json::ValueType::uintValue   , &activity_config_.validity_).asUInt();
@@ -248,6 +252,85 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     // ... return first activity properties ...
     return sequencer::Activity(a_sequence, /* a_id */ did, /* a_index */ 0, /* a_attempt */ 0).Bind(sequencer::Status::Pending, validity, ttr, activity);
 }
+
+/**
+ * @brief Cancel a sequence based on a running activity.
+ *
+ * @param a_activity Running activity info.
+ * @param a_response Activity response.
+ */
+void casper::job::Sequencer::CancelSequence (const casper::job::sequencer::Activity& a_activity,
+                                             const Json::Value& a_response)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+
+    
+    // ... log ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_activity.sequence(), "STEP", "Cancelling for ID %s", \
+                           a_activity.sequence().did().c_str()
+    );
+    
+    //
+    // ⚠️ Since we don't have ( nor do we want to ) any context about the running activity,
+    //    we are letting it run until it's finished and only mark as cancelled at the database
+    //    to stop any other activity in the sequence to run.
+    //
+    std::stringstream ss; ss.clear(); ss.str("");
+    Json::FastWriter  jw; jw.omitEndingLineFeed();
+    
+    // ... js.cancel_sequence (id INTEGER, status js.status, response JSONB) ...
+    ss << "SELECT * FROM js.cancel_sequence(";
+    ss <<   a_activity.sequence().did();
+    ss <<   ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_response)) << "'";
+    ss << ");";
+ 
+    double rtt = -1.0;
+    
+    // ... register @ DB ...
+    ExecuteQueryAndWait(/* a_tracking */ SEQUENCER_TRACK_CALL(a_activity.sequence().bjid(), "CANCELLING JOB SEQUENCE"),
+                        /* a_query    */ ss.str(), /* a_expected */ ExecStatusType::PGRES_TUPLES_OK,
+                        /* a_success_callback */
+                        [&rtt] (const Json::Value& a_value) {
+                            // ... array with one element is expected ...
+                            rtt = a_value[0]["rtt"].asDouble() * 1000;
+                        }
+    );
+    
+    // ... log ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_activity.sequence(), "STEP", "Cancelled for ID %s", \
+                           a_activity.sequence().did().c_str()
+    );
+
+    // ... copy sequence info, once cancelled / untracked it's relased and it's reference is no longer válid ...
+    const sequencer::Sequence sequence = sequencer::Sequence(a_activity.sequence());
+    
+    // ... cancel activity ...
+    CancelActivity(a_activity, a_response);
+    
+    ss.clear(); ss.str("");
+    ss << sequencer::Status::Cancelled;
+    
+    // ... log sequence 'rtt' ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_RTT, DOUBLE_FMT_D(0) "ms",
+                            rtt
+    );
+
+    // ... log sequence 'response' ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "Response: " CC_JOB_LOG_COLOR(ORANGE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                           jfw_.write(a_response).c_str()
+    );
+    
+    // ... log sequence 'status' ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_STATUS, CC_JOB_LOG_COLOR(ORANGE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                           ss.str().c_str()
+    );
+            
+    // ... log job 'status' ..
+    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_OUT, CC_JOB_LOG_COLOR(ORANGE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                      ss.str().c_str()
+    );
+}
+
 
 /**
  * @brief Call when the 'final' activity was performed so we close the sequence.
@@ -352,7 +435,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
-    const auto sequence = a_activity.sequence();
+    const auto& sequence = a_activity.sequence();
 
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_STEP,
@@ -364,7 +447,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         std::string tube_;
         int64_t     expires_in_;
         uint32_t    ttr_;
-        std::string id_;
+        uint64_t    id_;
         std::string key_;
         std::string channel_;
         uint16_t    sc_;
@@ -383,7 +466,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         throw sequencer::JSONValidationException(a_tracking, a_ev_exception.what());
     }
     
-    job_defs.id_         = "";
+    job_defs.id_         = 0;
     job_defs.key_        = ( config_.service_id() + ":jobs:" + job_defs.tube_ + ':' );
     job_defs.channel_    = ( config_.service_id() + ':'      + job_defs.tube_ + ':' );
     job_defs.sc_         = 500;
@@ -410,9 +493,9 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             //
             const ::ev::redis::Value& value = ::ev::redis::Reply::EnsureIntegerReply(a_object);
             
-            job_defs.id_       = std::to_string(value.Integer());
-            job_defs.key_     += job_defs.id_;
-            job_defs.channel_ += job_defs.id_;
+            job_defs.id_       = static_cast<uint64_t>(value.Integer());
+            job_defs.key_     += std::to_string(job_defs.id_);
+            job_defs.channel_ += std::to_string(job_defs.id_);
             
             // ... first, set queued status ...
             return new ::ev::redis::Request(loggable_data_, "HSET", {
@@ -492,7 +575,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     //
     try {
         // ... bind ids ...
-        a_activity.Bind(/* a_rjid */ job_defs.key_, /* a_rcid */ job_defs.channel_, /* a_new_attempt */ true);
+        a_activity.Bind(/* rjnr_ */ job_defs.id_, /* a_rjid */ job_defs.key_, /* a_rcnm */ job_defs.tube_, /* a_rcid */ job_defs.channel_, /* a_new_attempt */ true);
         // ... grab job object ...
         const auto job = GetJSONObject(a_activity.payload(), "job" , Json::ValueType::objectValue, /* a_default */ nullptr);
         // .. first, copy payload ( so it can be patched ) ...
@@ -506,7 +589,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
                          sequence.bjid(), jsw_.write(payload).c_str()
         );
         // ... set or overwrite 'id' and 'tube' properties ...
-        payload["id"]   = job_defs.id_;
+        payload["id"]   = std::to_string(job_defs.id_);
         payload["tube"] = job_defs.tube_;
         if ( false == payload.isMember("ttr") ) {
             payload["ttr"] = a_activity.ttr();
@@ -556,6 +639,8 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         a_activity.SetPayload(Json::Value::null);
         // ... and this activity ...
         UntrackActivity(a_activity); // ... ⚠️  a_activity STILL valid - it's the original one! ⚠️ ...
+        // ... unsubscribe activity ...
+        UnsubscribeActivity(a_activity);
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_ERR, a_activity, CC_JOB_LOG_STEP_ERROR,
                                "An error occurred while launching activity ~ %s",
@@ -671,6 +756,9 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Tra
     
     // ... untrack activity ...
     UntrackActivity(a_activity); // ... ⚠️ from now on a_activity is NOT valid ! ⚠️ ...
+    
+    // ... unsubscribe activity ...
+    UnsubscribeActivity(returning_activity);
     
     // ... do we have another activity?
     if ( sequencer::Status::Pending == next.status() ) {
@@ -832,7 +920,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
     
     CC_DEBUG_FAIL_IF_NOT_AT_MAIN_THREAD();
     
-    ScheduleCallbackOnLooperThread(/* a_id */ "redis-message",
+    ScheduleCallbackOnLooperThread(/* a_id */ "sequencer-activity-message-callback",
                                    /* a_callback */ [this, a_id, a_message](const std::string& /* a_id */) {
         
         sequencer::Sequence*  sequence  = nullptr;
@@ -1158,6 +1246,29 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
     CC_ASSERT(casper::job::sequencer::Status::NotSet != o_next.status());
 }
 
+/**
+ * @brief Cancel a running activity.
+ *
+ * @param a_activity Activity info.
+ * @param a_response Activity response.
+ */
+void casper::job::Sequencer::CancelActivity (const casper::job::sequencer::Activity& a_activity, const Json::Value& a_response)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    // ... copy activity info, once cancelled / untracked it's relased and it's reference is no longer válid ...
+    const sequencer::Activity activity = sequencer::Activity(a_activity);
+
+    // ... untrack activity ...
+    UntrackActivity(a_activity); // ... ⚠️ from now on a_activity is NOT valid ! ⚠️ ...
+
+    // ... unsubscribe activity ...
+    UnsubscribeActivity(activity);
+
+    // ... signal activity's job to cancel ...
+    Cancel(activity.sequence().bjid(), activity.rcid());
+}
+
 #ifdef __APPLE__
 #pragma mark -
 #endif
@@ -1324,6 +1435,70 @@ void casper::job::Sequencer::FinalizeJob (const sequencer::Sequence& a_sequence,
                                                 "EXCEPTION", a_ev_exception.what()
                 );
             }
+    );
+}
+
+/**
+ * @brief Called by REDIS subscriptions manager.
+ *
+ * @param a_id      REDIS channel id.
+ * @param a_status  Status flag value.
+ * @param a_message Channel's message.
+ */
+void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const std::string& a_status, const Json::Value& a_message)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_MAIN_THREAD();
+    
+    //
+    // ⚠️ We're only using this callback to listen to 'cancellation' signals for sequencer's job
+    //    NOT for sequences or activities - ( they have their own callbacks ).
+    //
+    if ( 0 != strcasecmp(a_status.c_str(), "cancelled") ) {
+        // ... not interested ...
+        return;
+    }
+    
+    ScheduleCallbackOnLooperThread("sequence-jobs-signals-callback",
+       [this, a_id, a_status, a_message](const std::string& /* a_id */) {
+    
+            CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+
+        //
+            // Process cancellation message.
+            //
+            const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(static_cast<int64_t>(a_id), "JOBS SIGNALS MESSAGE RECEIVED");
+        
+            try {
+                
+                Json::Value response;
+                
+                // ... prepare response ...
+                SetCancelledResponse(/* a_payload*/ a_message, /* o_response */ response);
+
+                //
+                // ⚠️ Since we're only running one activity at a time for a specific sequence,
+                //    we can stop the search at the first activity that belongs to the sequence.
+                //
+                for ( auto it : running_activities_ ) {
+                    // ... found?
+                    if ( it.second->sequence().rjnr() == a_id) {
+                        // .. copy sequence info ...
+                        const sequencer::Sequence sequence = it.second->sequence();
+                        // ... cancel ...
+                        CancelSequence(*it.second, response);
+                        // ... finish job ...
+                        FinalizeJob(sequence, response);
+                        // ... and we're done ...
+                        break;
+                    }
+                }
+                                
+            } catch (const ::cc::Exception& a_cc_exception) {
+                // ... log error ...
+                SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_ERR, tracking.bjid_, CC_JOB_LOG_STEP_ERROR, "%s", a_cc_exception.what());
+            }
+
+        }
     );
 }
 

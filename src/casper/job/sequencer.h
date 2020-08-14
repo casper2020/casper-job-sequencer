@@ -110,6 +110,7 @@ namespace casper
             // SEQUENCER
             //
             sequencer::Activity                              RegisterSequence              (sequencer::Sequence& a_sequence, const Json::Value& a_payload);
+            void                                             CancelSequence                (const sequencer::Activity& a_activity, const Json::Value& a_response);
             void                                             FinalizeSequence              (const sequencer::Activity& a_activity, const Json::Value& a_response,
                                                                                             double& o_rtt);
             
@@ -133,6 +134,9 @@ namespace casper
             // REDIS
             void                                             FinalizeActivity              (const sequencer::Activity& a_activity, const Json::Value* a_response,
                                                                                             sequencer::Activity& a_next);
+            
+            void                                             CancelActivity                (const sequencer::Activity& a_activity, const Json::Value& a_response);
+
             void                                             TrackActivity                 (const sequencer::Activity& a_activity);
             void                                             TrackActivity                 (sequencer::Activity* a_activity);
             
@@ -143,9 +147,10 @@ namespace casper
             //
             // JOB
             //
-            void                                            FinalizeJob                    (const sequencer::Sequence& a_sequence,
-                                                                                            const Json::Value& a_response);
-            
+            void                                             FinalizeJob                     (const sequencer::Sequence& a_sequence,
+                                                                                              const Json::Value& a_response);
+            void                                             OnJobsSignalReceived            (const uint64_t& a_id, const std::string& a_status, const Json::Value& a_message);
+
             //
             // POSTGRESQL
             //

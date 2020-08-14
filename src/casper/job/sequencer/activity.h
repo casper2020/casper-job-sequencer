@@ -54,7 +54,9 @@ namespace casper
                 size_t             index_;       //!< JOB index.
                 Json::Value        payload_;     //!< JOB payload.
                 size_t             attempt_;     //!< JOB attempt number.
+                uint64_t           rjnr_;        //!< REDIS job number.
                 std::string        rjid_;        //!< JOB REDIS id.
+                std::string        rcnm_;        //!< JOB REDIS channel name.
                 std::string        rcid_;        //!< JOB REDIS channel id.
                 Status             status_;      //!< JOB status.
                 uint32_t           validity_;    //!< JOB validity.
@@ -69,7 +71,7 @@ namespace casper
                 
             public: // Method(s) / Function(s)
                 
-                void      Bind    (const std::string& a_rjid, const std::string& a_rcid, const bool a_new_attempt);
+                void      Bind    (const uint64_t a_rjnr, const std::string& a_rjid, const std::string& a_rcnm, const std::string& a_rcid, const bool a_new_attempt);
                 Activity& Bind    (const Status& a_status, const uint32_t& a_validity, const uint32_t& a_ttr, const Json::Value& a_payload);
                 void      Reset   (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_validity = 0, const uint32_t& a_ttr = 0);
                 
@@ -87,7 +89,9 @@ namespace casper
                 const size_t&       index    () const;
                 const Json::Value&  payload  () const;
                 const size_t&       attempt  () const;
+                const uint64_t&     rjnr     () const;
                 const std::string&  rjid     () const;
+                const std::string&  rcnm     () const;
                 const std::string&  rcid     () const;
                 const Status&       status   () const;
                 const uint32_t&     validity () const;
@@ -102,13 +106,17 @@ namespace casper
             /**
              * @brief Set some of the activity mutable properties related to REDIS.
              *
+             * @param a_rjnr
              * @param a_rjid
+             * @param a_rcnm
              * @param a_rcid
              * @param a_new_attempt
              */
-            inline void Activity::Bind (const std::string& a_rjid, const std::string& a_rcid, const bool a_new_attempt)
+            inline void Activity::Bind (const uint64_t a_rjnr, const std::string& a_rjid, const std::string& a_rcnm, const std::string& a_rcid, const bool a_new_attempt)
             {
+                rjnr_ = a_rjnr;
                 rjid_ = a_rjid;
+                rcnm_ = a_rcnm;
                 rcid_ = a_rcid;
                 if ( true == a_new_attempt ) {
                     attempt_ += 1;
@@ -246,13 +254,29 @@ namespace casper
             }
         
             /**
+             * @return RO access to activity REDIS job number.
+             */
+            inline const uint64_t& Activity::rjnr () const
+            {
+                return rjnr_;
+            }
+        
+            /**
              * @return RO access to activity job REDIS id.
              */
             inline const std::string& Activity::rjid() const
             {
                 return rjid_;
             }
-        
+
+            /**
+             * @return RO access to ativity job REDIS channel name.
+             */
+            inline const std::string& Activity::rcnm() const
+            {
+                return rcnm_;
+            }
+
             /**
              * @return RO access to ativity job REDIS channel id.
              */
