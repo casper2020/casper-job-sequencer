@@ -473,9 +473,9 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     
     // ...
     osal::ConditionVariable cv;
-    ExecuteOnMainThread([this, &a_activity, &cv, &job_defs, &seq_id_key, &a_tracking] () {
+    ExecuteOnMainThread([this, &cv, &job_defs, &seq_id_key, &a_tracking] () {
 
-        NewTask([this, &job_defs, &seq_id_key] () -> ::ev::Object* {
+        NewTask([this, &seq_id_key] () -> ::ev::Object* {
             
             // ...  get new job id ...
             return new ::ev::redis::Request(loggable_data_, "INCR", {
@@ -517,7 +517,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             
             return new ::ev::redis::Request(loggable_data_, "EXPIRE", { job_defs.key_, std::to_string(job_defs.expires_in_) });
             
-        })->Finally([this, &cv, &job_defs] (::ev::Object* a_object) {
+        })->Finally([&cv, &job_defs] (::ev::Object* a_object) {
             
             //
             // EXPIRE:
@@ -1429,7 +1429,7 @@ void casper::job::Sequencer::FinalizeJob (const sequencer::Sequence& a_sequence,
                 );
              },
              /* a_failure_callback */
-             [this, &a_sequence](const ev::Exception& a_ev_exception) {
+             [this](const ev::Exception& a_ev_exception) {
                 // ... log status ...
                 EV_LOOP_BEANSTALK_JOB_LOG_QUEUE("STATUS", "%s: %s",
                                                 "EXCEPTION", a_ev_exception.what()
@@ -1531,7 +1531,7 @@ void casper::job::Sequencer::ExecuteQueryAndWait (const casper::job::sequencer::
     
     ExecuteOnMainThread([this, &a_query, &a_expected, &cv, &ex, &table] () {
         
-        NewTask([this, &a_query, &ex] () -> ::ev::Object* {
+        NewTask([this, &a_query] () -> ::ev::Object* {
             
             // ... execute query ...
             return new ev::postgresql::Request(loggable_data_, a_query);

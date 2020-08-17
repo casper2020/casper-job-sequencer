@@ -582,6 +582,7 @@
 					"$(SRCROOT)/../hiredis",
 					"$(SRCROOT)/../",
 				);
+				WARNING_CFLAGS = "-Wunused-lambda-capture";
 			};
 			name = Debug;
 		};
@@ -651,6 +652,7 @@
 					"$(SRCROOT)/../hiredis",
 					"$(SRCROOT)/../",
 				);
+				WARNING_CFLAGS = "-Wunused-lambda-capture";
 			};
 			name = Release;
 		};
@@ -696,7 +698,10 @@
 					"$(SRCROOT)/../hiredis",
 					"$(SRCROOT)/../",
 				);
-				WARNING_CFLAGS = "-Wno-documentation";
+				WARNING_CFLAGS = (
+					"$(inherited)",
+					"-Wno-documentation",
+				);
 			};
 			name = Debug;
 		};
@@ -742,7 +747,10 @@
 					"$(SRCROOT)/../hiredis",
 					"$(SRCROOT)/../",
 				);
-				WARNING_CFLAGS = "-Wno-documentation";
+				WARNING_CFLAGS = (
+					"$(inherited)",
+					"-Wno-documentation",
+				);
 			};
 			name = Release;
 		};

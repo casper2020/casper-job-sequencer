@@ -25,12 +25,19 @@ CHILD_CWD           := $(THIS_DIR)
 CHILD_MAKEFILE      := $(MAKEFILE_LIST)
 
 EV_DEP_ON           := true
+CURL_DEP_ON         := true
 
 ###################
 # THIS TOOL SOURCE
 ###################
 
-CASPER_JOB_SEQUENCER_CC_SRC :=
+CASPER_JOB_SEQUENCER_CC_SRC := \
+	./src/casper/job/live.cc \
+	./src/casper/job/sequencer/v8/script.cc \
+	./src/casper/job/sequencer/sequence.cc \
+	./src/casper/job/sequencer/activity.cc \
+	./src/casper/job/sequencer.cc \
+	./src/casper/job/recovery.cc
 
 ##########
 # SOURCE
@@ -56,7 +63,24 @@ INCLUDE_DIRS := \
 include $(PACKAGER_DIR)/common/c++/common.mk
 
 # dependencies
-set-dependencies: # TODO
+CASPER_JOB_SEQUENCER_DEPENDENCIES := \
+	casper-connectors-v8-dep-on \
+	casper-osal-dep-on \
+	postgresql-dep-on \
+	v8-dep-on \
+	curl-dep-on \
+	openssl-dep-on \
+	libevent2-dep-on \
+	icu-dep-on \
+	jsoncpp-dep-on \
+	zlib-dep-on \
+	hiredis-dep-on \
+	beanstalk-client-dep-on
+
+ifeq (Darwin, $(PLATFORM))
+  CASPER_JOB_SEQUENCER_DEPENDENCIES += macos-security-framework-dep-on
+endif
+set-dependencies: $(CASPER_JOB_SEQUENCER_DEPENDENCIES)
 
 # this is a command line tool
 all: exec

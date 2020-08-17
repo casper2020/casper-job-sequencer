@@ -141,7 +141,7 @@ void casper::job::sequencer::v8::Script::SetData (const char* const a_name, cons
                                                  ::v8::Persistent<::v8::Object>* o_object, ::v8::Persistent<::v8::Value>* o_value,
                                                  ::v8::Persistent<::v8::String>* o_key) const
 {
-    IsolatedCall([this, &a_name, &a_data, &o_object, &o_value, &o_key]
+    IsolatedCall([&a_name, &a_data, &o_object, &o_value, &o_key]
                  (::v8::Local<::v8::Context>& a_context, ::v8::TryCatch& /* a_try_catch */, ::v8::Isolate* a_isolate) {
                                           ::v8::Persistent<::v8::Value> result;
                      
