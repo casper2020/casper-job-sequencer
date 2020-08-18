@@ -1709,7 +1709,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     
     // ... js.get_activities_responses (sid INTEGER) ...
     ss << "SELECT * FROM js.get_activities_responses(";
-    ss <<  a_activity.sequence().cid();
+    ss <<  a_activity.sequence().did();
     ss << ");";
     
     
@@ -1811,13 +1811,30 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     // ... traverse JSON and evaluate 'String' fields ...
     ::cc::v8::Value value;
     PatchObject(payload, [this, &a_tracking, &data, &value] (const std::string& a_expression) -> Json::Value {
+        // ... start as null ...
         value.SetNull();
+        // ...
         try {
             script_->Evaluate(data, a_expression, value);
         } catch (const ::cc::v8::Exception& a_v8e) {
             throw sequencer::V8ExpressionEvaluationException(a_tracking, a_v8e);
         }
-        return Json::Value(value.AsString());
+        // ...
+        switch(value.type()) {
+            case ::cc::v8::Value::Type::Int32:
+                return Json::Value(value.operator int());
+            case ::cc::v8::Value::Type::UInt32:
+                return Json::Value(value.operator unsigned int());
+            case ::cc::v8::Value::Type::Double:
+                return Json::Value(value.operator double());
+            case ::cc::v8::Value::Type::String:
+                return Json::Value(value.AsString());
+            case ::cc::v8::Value::Type::Boolean:
+                return Json::Value(value.operator const bool());
+            case ::cc::v8::Value::Type::Undefined:
+            case ::cc::v8::Value::Type::Null:
+                return Json::Value(Json::Value::null);
+        }
     });
     
     // ... log ...
