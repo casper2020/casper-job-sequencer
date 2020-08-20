@@ -763,8 +763,8 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Tra
     // ... do we have another activity?
     if ( sequencer::Status::Pending == next.status() ) {
         // ... we're ready to next activity ...
-        CC_ASSERT(next.index() != a_activity.index());
-        CC_ASSERT(0 != next.did().compare(a_activity.did()));
+        CC_ASSERT(next.index() != returning_activity.index());
+        CC_ASSERT(0 != next.did().compare(returning_activity.did()));
         // ... launch activity ...
         LaunchActivity(a_tracking, next, /* a_at_run */ false);
     } else {
@@ -778,9 +778,9 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Tra
         } else {
             CC_WARNING_TODO("CJS: review IF");
             // ... a critical error occurred?
-            if ( sequencer::Status::Failed == a_activity.status() ) {
+            if ( sequencer::Status::Failed == returning_activity.status() ) {
                 // ... activity payload must the the error do display ...
-                job_response = &a_activity.payload();
+                job_response = &returning_activity.payload();
             } else if ( sequencer::Status::Done == next.status() ) { // ... we're done?
                 // ... we're done ...
                 job_response = a_response;
@@ -1343,6 +1343,9 @@ void casper::job::Sequencer::UntrackActivity (const casper::job::sequencer::Acti
                            "%s", "Untrack"
     );
 
+    // ... cancel previously schedule ( if any ) timeout event for this activity ...
+    TryCancelCallbackOnLooperThread(a_activity.rcid());
+
     // ... ensure it's running ...
     const auto it = running_activities_.find(a_activity.rcid());
     if ( running_activities_.end() != it ) {
@@ -1350,9 +1353,6 @@ void casper::job::Sequencer::UntrackActivity (const casper::job::sequencer::Acti
         running_activities_.erase(it);
     }
     
-    // ... cancel previously schedule ( if any ) timeout event for this activity ...
-    TryCancelCallbackOnLooperThread(a_activity.rcid());
-
     // ... log ...
     LogStats();
 }
@@ -1381,7 +1381,7 @@ void casper::job::Sequencer::OnActivityTimeout (const std::string& a_rcid)
     );
         
     Json::Value response;
-    SetTimeoutResponse(/* a_payload */ Json::Value::null, response);
+    (void)SetTimeoutResponse(/* a_payload */ Json::Value::null, response);
 
     // ... signal activity 'failed' ...
     ActivityReturned(SEQUENCER_TRACK_CALL(it->second->sequence().bjid(), "ACTIVITY TIMEOUT"),
@@ -1831,6 +1831,8 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
                 return Json::Value(value.AsString());
             case ::cc::v8::Value::Type::Boolean:
                 return Json::Value(value.operator const bool());
+            case ::cc::v8::Value::Type::Object:
+                return value.operator const Json::Value &();
             case ::cc::v8::Value::Type::Undefined:
             case ::cc::v8::Value::Type::Null:
                 return Json::Value(Json::Value::null);
