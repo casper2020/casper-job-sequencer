@@ -660,7 +660,9 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 47F37FAB2484FDBB00493361 /* debug.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -685,7 +687,9 @@
 					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
 					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cldware.casper-job-sequencer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/src",
@@ -709,7 +713,9 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 47F37FAC2484FDBB00493361 /* release.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -734,7 +740,9 @@
 					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
 					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cldware.casper-job-sequencer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				USER_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/src",
