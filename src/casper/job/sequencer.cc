@@ -666,7 +666,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             );
             Json::Value errors = Json::Value::null;
             // ... override with errors serialization ...
-            SetFailedResponse(/* a_code */ exception->code_, errors);
+            (void)SetFailedResponse(/* a_code */ exception->code_, errors);
             // ... reset
             a_activity.Reset(sequencer::Status::Failed, /* a_payload */ errors);
             // ... get rid of exception ...
@@ -1007,7 +1007,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 );
             } catch (const ::cc::Exception& a_cc_exception) {
                 // ... copy exception ...
-                exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(activity_it->second->sequence().bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
                 // ... log it ...
                 CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
                                  sequence->bjid(), a_id.c_str(), a_cc_exception.what()
@@ -1017,7 +1017,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                     ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
                 } catch (const ::cc::Exception& a_cc_exception) {
                     // ... copy exception ...
-                    exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(activity_it->second->sequence().bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                    exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
                     // ... log it ...
                     CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
                                      sequence->bjid(), a_id.c_str(), a_cc_exception.what()
@@ -1033,7 +1033,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 //
                 Json::Value response = Json::Value::null;
                 // ... build response ..
-                SetFailedResponse(exception->code_, response);
+                (void)SetFailedResponse(exception->code_, response);
                 // ... notify 'job finished' ...
                 FinalizeJob(*sequence, response);
                 // ... cleanup ...
@@ -1232,7 +1232,7 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
             if ( s_irj_teminal_status_map_.end() == m_it ) {
                 Json::Value response = Json::Value::null;
                 // ... set standard 'failed' response ...
-                SetFailedResponse(/* a_code */ 404, Json::Value("Invalid status '" + std::string(status.asCString()) + "'"), response);
+                (void)SetFailedResponse(/* a_code */ 404, Json::Value("Invalid status '" + std::string(status.asCString()) + "'"), response);
                 // ... invalid status - set internal error ...
                 o_next.Reset(sequencer::Status::Failed, /* a_payload */ response);
             }
@@ -1473,7 +1473,7 @@ void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const s
                 Json::Value response;
                 
                 // ... prepare response ...
-                SetCancelledResponse(/* a_payload*/ a_message, /* o_response */ response);
+                (void)SetCancelledResponse(/* a_payload*/ a_message, /* o_response */ response);
 
                 //
                 // ⚠️ Since we're only running one activity at a time for a specific sequence,
