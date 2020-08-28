@@ -54,8 +54,7 @@ const std::map<std::string, casper::job::sequencer::Status> casper::job::Sequenc
  * param a_config
  */
 casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config)
-    : cc::job::easy::Job(a_loggable_data, a_tube, a_config),
-      thread_id_(cc::debug::Threading::GetInstance().CurrentThreadID()),
+    : cc::job::easy::Job(a_loggable_data, a_tube, a_config),      
       sequence_config_(a_config.other()[a_tube]), activity_config_(a_config.other()[a_tube])
 {
     jfw_.omitEndingLineFeed();

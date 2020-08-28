@@ -77,10 +77,6 @@ namespace casper
             
             static const std::map<std::string, sequencer::Status> s_irj_teminal_status_map_;
 
-        private: // Const Data
-            
-            const cc::debug::Threading::ThreadID thread_id_;
-
         private: // Data
 
             sequencer::Config                           sequence_config_;
@@ -178,15 +174,9 @@ namespace casper
             
         protected: // Inline Method(s) // Function(s)
             
-            const cc::debug::Threading::ThreadID thread_id () const;
             void                                 LogStats () const;
 
         }; // end of class 'Sequencer'
-    
-        inline const cc::debug::Threading::ThreadID Sequencer::thread_id () const
-        {
-            return thread_id_;
-        }
     
         /**
          * @brief Log some statistics.
