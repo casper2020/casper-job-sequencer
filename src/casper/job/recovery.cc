@@ -65,7 +65,7 @@ casper::job::Recovery::~Recovery ()
 void casper::job::Recovery::Run (const int64_t& a_id, const Json::Value& a_payload,
                                  cc::job::easy::Job::Response& o_response)
 {
-    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id());
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     //   {
     //      "id": "1",

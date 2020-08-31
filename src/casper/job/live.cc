@@ -65,7 +65,7 @@ casper::job::Live::~Live ()
 void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
                                  cc::job::easy::Job::Response& o_response)
 {
-    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id());
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     //   {
     //      "id": "1",
@@ -177,7 +177,7 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
                         /* a_code */  ev::loop::beanstalkd::Job::k_exception_rc_
             );
             // ... jump for common exception handling ...
-            throw sequencer::JumpErrorAlreadySet(tracking, a_exeption.code_ ,LastError()["why"].asCString());
+            throw sequencer::JumpErrorAlreadySet(tracking, a_exeption.code_, LastError()["why"].asCString());
         }
         
     } catch (const sequencer::JumpErrorAlreadySet& a_exception) {
