@@ -158,11 +158,6 @@ namespace casper
             const ::ev::postgresql::Value*                  EnsurePostgreSQLValue          (const ::ev::Object* a_object, const ExecStatusType& a_expected);
                         
             //
-            // OTHER HELPERS
-            //
-            void                                            TrapUnhandledExceptions        (const char* const a_type, const std::function<void()>& a_callback,
-                                                                                            const sequencer::Tracking& a_tracking);
-            //
             // SERIALIZATION HELPERS
             //
             const Json::Value& AsJSON (const std::string& a_value, Json::Value& o_value);

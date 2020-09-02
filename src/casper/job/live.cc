@@ -159,25 +159,13 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
                  try {
                      ::cc::Exception::Rethrow(/* a_unhandled */ false,  tracking.file_.c_str(), tracking.line_, tracking.function_.c_str());
                 } catch (::cc::Exception& a_cc_exception) {
-                    // ... track error ...
-                    AppendError(/* a_type  */ tracking.action_.c_str(),
-                                /* a_why   */ a_cc_exception.what(),
-                                /* a_where */ tracking.function_.c_str(),
-                                /* a_code */  ev::loop::beanstalkd::Job::k_exception_rc_
-                    );
+                    // ... jump for common exception handling ...
+                    throw sequencer::JumpErrorAlreadySet(tracking, /* o_code */ 500, a_cc_exception.what());
                 }
-                // ... jump for common exception handling ...
-                throw sequencer::JumpErrorAlreadySet(tracking, /* o_code */ 500, LastError()["why"].asCString());
             }
-        } catch (const sequencer::Exception& a_exeption) {
-            // ... track 'SEQUENCE' or 'ACTIVITY' payload error ...
-            AppendError(/* a_type  */ a_exeption.tracking_.action_.c_str(),
-                        /* a_why   */ a_exeption.what(),
-                        /* a_where */ a_exeption.tracking_.function_.c_str(),
-                        /* a_code */  ev::loop::beanstalkd::Job::k_exception_rc_
-            );
+        } catch (const sequencer::Exception& a_exception) {
             // ... jump for common exception handling ...
-            throw sequencer::JumpErrorAlreadySet(tracking, a_exeption.code_, LastError()["why"].asCString());
+            throw sequencer::JumpErrorAlreadySet(a_exception.tracking_, a_exception.code_, a_exception.what());
         }
         
     } catch (const sequencer::JumpErrorAlreadySet& a_exception) {

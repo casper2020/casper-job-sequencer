@@ -450,6 +450,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         std::string key_;
         std::string channel_;
         uint16_t    sc_;
+        std::string ew_; // exception 'what'
     } ActivityJob;
     
     ActivityJob job_defs;
@@ -469,10 +470,11 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     job_defs.key_        = ( config_.service_id() + ":jobs:" + job_defs.tube_ + ':' );
     job_defs.channel_    = ( config_.service_id() + ':'      + job_defs.tube_ + ':' );
     job_defs.sc_         = 500;
+    job_defs.ew_         = "";
     
     // ...
     osal::ConditionVariable cv;
-    ExecuteOnMainThread([this, &cv, &job_defs, &seq_id_key, &a_tracking] () {
+    ExecuteOnMainThread([this, &cv, &job_defs, &seq_id_key] () {
 
         NewTask([this, &seq_id_key] () -> ::ev::Object* {
             
@@ -535,19 +537,10 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             // RELEASE job control
             cv.Wake();
             
-        })->Catch([this, &cv, &job_defs, &a_tracking] (const ::ev::Exception& a_ev_exception) {
+        })->Catch([&cv, &job_defs] (const ::ev::Exception& a_ev_exception) {
             
             job_defs.sc_ = 500;
-            
-            CC_WARNING_TODO("CJS: BETTER EXCEPTION REPORT - SEE, merge and fix ExecuteQueryAndWait");
-            
-            const std::string prefix = "rror while setting up REDIS job to tube " + job_defs.tube_;
-            
-            AppendError(/* a_type  */ "REDIS",
-                        /* a_why   */ ( 'E'+ prefix + ": " + a_ev_exception.what() ).c_str(),
-                        /* a_where */ a_tracking.function_.c_str(),
-                        /* a_code */ ev::loop::beanstalkd::Job::k_exception_rc_
-            );
+            job_defs.ew_ = a_ev_exception.what();
             
             // RELEASE job control
             cv.Wake();
@@ -563,6 +556,11 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     // CONTINUE OR ROLLBACK?
     //
     if ( 200 != job_defs.sc_ ) {
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_ERR, a_activity, CC_JOB_LOG_STEP_ERROR,
+                               "An error occurred while launching activity ~ %s",
+                               job_defs.ew_.c_str()
+        );
         // ... an error is already set ...
         return job_defs.sc_;
     }
@@ -657,12 +655,6 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             // ... exceptions can be thrown here ...
             throw copy;
         } else {
-            // ... track error ...
-            AppendError(/* a_type  */ a_tracking.action_.c_str(),
-                        /* a_why   */ exception->what(),
-                        /* a_where */ a_tracking.function_.c_str(),
-                        /* a_code */ ev::loop::beanstalkd::Job::k_exception_rc_
-            );
             Json::Value errors = Json::Value::null;
             // ... override with errors serialization ...
             (void)SetFailedResponse(/* a_code */ exception->code_, errors);
@@ -1519,11 +1511,7 @@ void casper::job::Sequencer::ExecuteQueryAndWait (const casper::job::sequencer::
                                                   const std::function<void(const ev::Exception& a_exception)> a_failure_callback)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    
-    // ... keep track if initial errors count ...
-    
-    const size_t ec = ErrorsCount();
-    
+        
     osal::ConditionVariable cv;
     cc::Exception*          ex    = nullptr;
     Json::Value*            table = nullptr;
@@ -1562,38 +1550,35 @@ void casper::job::Sequencer::ExecuteQueryAndWait (const casper::job::sequencer::
     
     // ... WAIT ...
     cv.Wait();
+    
+    std::string error_msg = "";
+    
+    try {
         
-    // ... if an exception is set ...
-    if ( nullptr != ex ) {
-        // ... notify ...
-        if ( nullptr != a_failure_callback ) {
-            TrapUnhandledExceptions(/* a_type */
-                                    "PostgreSQL Query Execution Failed Notification Callback",
-                                    /* a_callback */
-                                    [&] () {
-                                        a_failure_callback(*ex);
-                                    },
-                                    a_tracking
-            );
+        // ... if an exception is set ...
+        if ( nullptr != ex ) {
+            // ... notify ...
+            if ( nullptr != a_failure_callback ) {
+                a_failure_callback(*ex);
+            } else {
+                error_msg = ex->what();
+            }
         } else {
-            // ... append error ...
-            AppendError(/* a_type  */ "PostgreSQL Query Execution Failed Notification Callback",
-                        /* a_why   */ ex->what(),
-                        /* a_where */ __PRETTY_FUNCTION__,
-                        /* a_code */ ev::loop::beanstalkd::Job::k_exception_rc_
-            );
+            // ... notify ...
+            if ( nullptr != a_success_callback ) {
+                a_success_callback(( nullptr != table ? *table : Json::Value::null ));
+            }
         }
-    } else {
-        // ... notify ...
-        if ( nullptr != a_success_callback ) {
-            TrapUnhandledExceptions(/* a_type */
-                                    "PostgreSQL Query Execution Succeeded Notification Callback",
-                                    /* a_callback */
-                                    [&] () {
-                                        a_success_callback(( nullptr != table ? *table : Json::Value::null ));
-                                    },
-                                    a_tracking
-            );
+        
+    } catch (const cc::Exception& a_cc_exception) {
+        // ... track error ...
+        error_msg = a_cc_exception.what();
+    } catch (...) {
+        try {
+            // ... rethrow ...
+            ::cc::Exception::Rethrow(/* a_unhandled */ true, a_tracking.file_.c_str(), a_tracking.line_, a_tracking.function_.c_str());
+        } catch (::cc::Exception& a_cc_exception) {
+            error_msg = a_cc_exception.what();
         }
     }
     
@@ -1601,13 +1586,14 @@ void casper::job::Sequencer::ExecuteQueryAndWait (const casper::job::sequencer::
     if ( nullptr != ex ) {
         delete ex;
     }
+    
     if ( nullptr != table ) {
         delete table;
     }
     
     // ... if errors count changed
-    if ( ErrorsCount() != ec ) {
-        throw sequencer::JumpErrorAlreadySet(a_tracking, /* a_code */ 500, LastError()["why"].asCString());
+    if ( 0 != error_msg.length() ) {
+        throw sequencer::JumpErrorAlreadySet(a_tracking, /* a_code */ 500, error_msg.c_str());
     }
 }
 
@@ -1645,36 +1631,6 @@ const ::ev::postgresql::Value* casper::job::Sequencer::EnsurePostgreSQLValue (co
     }
     
     return &reply->value();
-}
-
-void casper::job::Sequencer::TrapUnhandledExceptions (const char* const a_type, const std::function<void()>& a_callback,
-                                                      const casper::job::sequencer::Tracking& a_tracking)
-{
-    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    
-    try {
-        // ... perform callback ...
-        a_callback();
-    } catch (const cc::Exception& a_cc_exception) {
-        // ... track error ...
-        AppendError(/* a_type  */ std::string(a_tracking.action_ + ':' + a_type).c_str(),
-                    /* a_why   */ a_cc_exception.what(),
-                    /* a_where */ a_tracking.function_.c_str(),
-                    /* a_code */ casper::job::Sequencer::k_exception_rc_
-        );
-    } catch (...) {
-        try {
-            // ... rethrow ...
-            ::cc::Exception::Rethrow(/* a_unhandled */ true, a_tracking.file_.c_str(), a_tracking.line_, a_tracking.function_.c_str());
-        } catch (::cc::Exception& a_cc_exception) {
-            // ... track error ...
-            AppendError(/* a_type  */ std::string(a_tracking.action_ + ':' + a_type).c_str(),
-                        /* a_why   */ a_cc_exception.what(),
-                        /* a_where */ a_tracking.function_.c_str(),
-                        /* a_code */ ev::loop::beanstalkd::Job::k_exception_rc_
-            );
-        }
-    }
 }
 
 /**
