@@ -29,9 +29,10 @@
 #include "cc/types.h"
 
 CC_WARNING_TODO("CJS: review all comments and parameters names");
-CC_WARNING_TODO("CJS: WRITE SOME OF THE DEBUG MESSAGES TO PERMANENT LOG!!");
+
 CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread");
 
+CC_WARNING_TODO("CJS: WRITE SOME OF THE DEBUG MESSAGES TO PERMANENT LOG!!");
 CC_WARNING_TODO("CJS: REVIEW CC_DEBUG_LOG_TRACE / CC_DEBUG_LOG_MSG (\"job\") USAGE")
 
 #ifdef __APPLE__
@@ -199,9 +200,7 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     }
     
     
-    // ... now register sequence ...
-    CC_WARNING_TODO("CJS: validate payload");
-    
+    // ... now register sequence ...    
     std::stringstream ss; ss.clear(); ss.str("");
     Json::FastWriter  jw; jw.omitEndingLineFeed();
     
@@ -943,7 +942,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                                  activity_it->second->sequence().bjid(), a_id.c_str(), status.c_str()
                 );
                 
-                // ... interest in this status ( completed, failed or cancelled ) ?
+                // ... interested in this status ( completed, failed or cancelled ) ?
                 const auto m_it = s_irj_teminal_status_map_.find(status);
                 if ( s_irj_teminal_status_map_.end() == m_it ) {
                     //
@@ -954,7 +953,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                                              *activity_it->second, object
                         );
                     }
-                    // ... no moe interest, we're done
+                    // ... not interest, we're done
                     return;
                 }
                 
