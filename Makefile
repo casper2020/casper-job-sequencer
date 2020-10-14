@@ -25,23 +25,19 @@ CHILD_CWD           := $(THIS_DIR)
 CHILD_MAKEFILE      := $(MAKEFILE_LIST)
 
 EV_DEP_ON           := true
-CURL_DEP_ON         := true
 
 ###################
 # THIS TOOL SOURCE
 ###################
 
 CASPER_JOB_SEQUENCER_CC_SRC := \
-	./src/casper/job/live.cc \
+	./src/casper/job/live.cc                \
+	./src/casper/job/sequencer.cc           \
+	./src/casper/job/sequencer/sequence.cc  \
 	./src/casper/job/sequencer/v8/script.cc \
-	./src/casper/job/sequencer/sequence.cc \
-	./src/casper/job/sequencer/activity.cc \
-	./src/casper/job/sequencer.cc \
-	./src/casper/job/recovery.cc
+	./src/casper/job/sequencer/activity.cc  \
 
-##########
 # SOURCE
-##########
 
 BISON_SRC :=
 RAGEL_SRC :=

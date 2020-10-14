@@ -26,7 +26,6 @@
 #include "cc/job/easy/handler.h"
 
 #include "casper/job/live.h"
-#include "casper/job/recovery.h"
 
 /**
  * @brief Main.
@@ -68,11 +67,6 @@ int main(int argc, char** argv)
             {
                 casper::job::Live::s_tube_, [] (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config) -> cc::job::easy::Job* {
                     return new casper::job::Live(a_loggable_data, a_config);
-                }
-            },
-            {
-                casper::job::Recovery::s_tube_, [] (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config) -> cc::job::easy::Job* {
-                    return new casper::job::Recovery(a_loggable_data, a_config);
                 }
             }
         },
