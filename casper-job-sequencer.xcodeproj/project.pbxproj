@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		474473F224CEDF98000ADE2D /* recovery.cc in Sources */ = {isa = PBXBuildFile; fileRef = 474473F124CEDF98000ADE2D /* recovery.cc */; };
 		474473F524CEE40E000ADE2D /* live.cc in Sources */ = {isa = PBXBuildFile; fileRef = 474473F324CEE40E000ADE2D /* live.cc */; };
 		477C56EF24A4E9ED0048A67D /* script.cc in Sources */ = {isa = PBXBuildFile; fileRef = 477C56EB24A4E9ED0048A67D /* script.cc */; };
 		47EF3FDC248A44A20094608D /* activity.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47EF3FD8248A44A20094608D /* activity.cc */; };
@@ -24,6 +23,27 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		47DFA7952538699800B9219A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 472C199F251A15FC00811559;
+			remoteInfo = "casper-cc";
+		};
+		47DFA7992538699800B9219A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 47482EC824EFDEFF009D224C;
+			remoteInfo = "casper-osal-icu";
+		};
+		47DFA79B2538699800B9219A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47F37FAD2484FDC500493361 /* casper-osal.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1579E70F24F7B6A000F6D139;
+			remoteInfo = "casper-osal-ragel";
+		};
 		47F37F9D2484FD8C00493361 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 47F37F972484FD8C00493361 /* casper-connectors.xcodeproj */;
@@ -123,8 +143,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		474473F024CEDF98000ADE2D /* recovery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = recovery.h; path = src/casper/job/recovery.h; sourceTree = SOURCE_ROOT; };
-		474473F124CEDF98000ADE2D /* recovery.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = recovery.cc; path = src/casper/job/recovery.cc; sourceTree = SOURCE_ROOT; };
 		474473F324CEE40E000ADE2D /* live.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = live.cc; sourceTree = "<group>"; };
 		474473F424CEE40E000ADE2D /* live.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = live.h; sourceTree = "<group>"; };
 		474473F824CEE854000ADE2D /* status.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
@@ -245,6 +263,7 @@
 				47F37F9E2484FD8C00493361 /* libcasper-connectors.a */,
 				47F37FA02484FD8C00493361 /* libcasper-connectors-v8.a */,
 				47F37FA22484FD8C00493361 /* libcasper-connectors-icu.a */,
+				47DFA7962538699800B9219A /* libcasper-cc.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -263,6 +282,8 @@
 			isa = PBXGroup;
 			children = (
 				47F37FB22484FDC500493361 /* libcasper-osal.a */,
+				47DFA79A2538699800B9219A /* libcasper-osal-icu.a */,
+				47DFA79C2538699800B9219A /* libcasper-osal-ragel.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -326,8 +347,6 @@
 				47F37FEA2484FF7800493361 /* sequencer.cc */,
 				474473F424CEE40E000ADE2D /* live.h */,
 				474473F324CEE40E000ADE2D /* live.cc */,
-				474473F024CEDF98000ADE2D /* recovery.h */,
-				474473F124CEDF98000ADE2D /* recovery.cc */,
 			);
 			path = job;
 			sourceTree = "<group>";
@@ -412,6 +431,27 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
+		47DFA7962538699800B9219A /* libcasper-cc.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-cc.a";
+			remoteRef = 47DFA7952538699800B9219A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47DFA79A2538699800B9219A /* libcasper-osal-icu.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-osal-icu.a";
+			remoteRef = 47DFA7992538699800B9219A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		47DFA79C2538699800B9219A /* libcasper-osal-ragel.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcasper-osal-ragel.a";
+			remoteRef = 47DFA79B2538699800B9219A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		47F37F9E2484FD8C00493361 /* libcasper-connectors.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
@@ -475,7 +515,6 @@
 				47F37FEB2484FF7800493361 /* sequencer.cc in Sources */,
 				477C56EF24A4E9ED0048A67D /* script.cc in Sources */,
 				47F37F7F2484FADB00493361 /* main.cc in Sources */,
-				474473F224CEDF98000ADE2D /* recovery.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
