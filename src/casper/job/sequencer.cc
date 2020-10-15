@@ -1109,7 +1109,13 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
         const std::string src_channel_key = a_activity.rcid();
         const std::string dst_channel_key = a_activity.sequence().rcid();
         Json::Value       status          = Json::Value(Json::ValueType::objectValue);
-        status["status"] = "reset";
+        status["status"]                  = "reset";
+#if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+        status["debug"]["activity"]["rcid"]   = a_activity.rcid();
+        status["debug"]["activity"]["number"] = static_cast<Json::UInt64>(a_activity.index() + 1);
+        status["debug"]["sequence"]["rcid"]   = a_activity.sequence().rcid();
+        status["debug"]["sequence"]["count"]  = static_cast<Json::UInt64>(a_activity.sequence().count());
+#endif
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_RELAY,
                                CC_JOB_LOG_COLOR(YELLOW) "Relay ( forged ) message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
@@ -1897,15 +1903,15 @@ void casper::job::Sequencer::Sleep (const casper::job::sequencer::Config& a_conf
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     // ... sleep?
-    if ( 0 != a_config.delay_.asUInt() ) {
+    if ( 0 != a_config.sleep_.asUInt() ) {
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_INFO,
                                CC_JOB_LOG_COLOR(WARNING) "%s" CC_LOGS_LOGGER_RESET_ATTRS " " UINT64_FMT "ms",
                                a_msg,
-                               static_cast<uint64_t>(a_config.delay_.asUInt())
+                               static_cast<uint64_t>(a_config.sleep_.asUInt())
         );
         // ... do sleep ...
-        usleep(a_config.delay_.asUInt() * 1000);
+        usleep(a_config.sleep_.asUInt() * 1000);
     }
 }
 
