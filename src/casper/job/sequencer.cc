@@ -722,7 +722,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     // ... at macOS and if debug mode ...
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
     // ... if configured will sleep between message relay ...
-    Sleep (a_activity, "Sleeping between relays");
+    Sleep(activity_config_, a_activity, "Sleeping between message relays");
 #endif
 }
 
@@ -1097,6 +1097,12 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     void casper::job::Sequencer::PushActivity (const casper::job::sequencer::Activity& a_activity)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    // ... at macOS and if debug mode ...
+    #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+        // ... if configured will sleep between message relay ...
+        Sleep(sequence_config_, a_activity, "Sleeping before activity push");
+    #endif
         
     // ... clean up ...
     {
@@ -1126,7 +1132,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
         // ... at macOS and if debug mode ...
         #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
             // ... if configured will sleep between message relay ...
-            Sleep (a_activity, "Sleeping between relays");
+            Sleep(activity_config_, a_activity, "Sleeping between ( forged ) message relays");
         #endif
     }
     
@@ -1881,23 +1887,25 @@ void casper::job::Sequencer::PatchObject (Json::Value& a_object, const std::func
 /**
  * @brief Sleep between activity actions
  *
+ * @param a_config   Config where delay should be loaded from.
  * @param a_activity Running activity info.
  * @param a_msg      Message to log along with sleep time in milliseconds.
  *
  */
-void casper::job::Sequencer::Sleep (const casper::job::sequencer::Activity& a_activity, const char* const a_msg)
+void casper::job::Sequencer::Sleep (const casper::job::sequencer::Config& a_config,
+                                    const casper::job::sequencer::Activity& a_activity, const char* const a_msg)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     // ... sleep?
-    if ( 0 != activity_config_.delay_.asUInt() ) {
+    if ( 0 != a_config.delay_.asUInt() ) {
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_INFO,
                                CC_JOB_LOG_COLOR(WARNING) "%s" CC_LOGS_LOGGER_RESET_ATTRS " " UINT64_FMT "ms",
                                a_msg,
-                               static_cast<uint64_t>(activity_config_.delay_.asUInt())
+                               static_cast<uint64_t>(a_config.delay_.asUInt())
         );
         // ... do sleep ...
-        usleep(activity_config_.delay_.asUInt() * 1000);
+        usleep(a_config.delay_.asUInt() * 1000);
     }
 }
 

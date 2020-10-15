@@ -170,7 +170,7 @@ namespace casper
             // DEBUG HELPER(S)
             //
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
-            void               Sleep (const sequencer::Activity& a_activity, const char* const a_msg);
+            void               Sleep (const sequencer::Config& a_config, const sequencer::Activity& a_activity, const char* const a_msg);
 #endif
             
         protected: // Inline Method(s) // Function(s)
