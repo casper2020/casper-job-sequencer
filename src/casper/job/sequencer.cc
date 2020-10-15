@@ -703,7 +703,6 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
                            CC_JOB_LOG_COLOR(YELLOW) "Relay message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
                            src_channel_key.c_str(), dst_channel_key.c_str(), jfw_.write(a_message).c_str()
     );
-        
     try {
         Relay(a_activity.sequence().bjid(), dst_channel_key, a_message);
     } catch (...) {
@@ -719,6 +718,12 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
             );
         }
     }
+    
+    // ... at macOS and if debug mode ...
+#if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+    // ... if configured will sleep between message relay ...
+    Sleep (a_activity, "Sleeping between relays");
+#endif
 }
 
 /**
@@ -1092,15 +1097,45 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     void casper::job::Sequencer::PushActivity (const casper::job::sequencer::Activity& a_activity)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+        
+    // ... clean up ...
+    {
+        const std::string src_channel_key = a_activity.rcid();
+        const std::string dst_channel_key = a_activity.sequence().rcid();
+        Json::Value       status          = Json::Value(Json::ValueType::objectValue);
+        status["status"] = "reset";
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_RELAY,
+                               CC_JOB_LOG_COLOR(YELLOW) "Relay ( forged ) message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               src_channel_key.c_str(), dst_channel_key.c_str(), jfw_.write(status).c_str()
+        );
+        try {
+            Relay(a_activity.sequence().bjid(), dst_channel_key, status);
+        } catch (...) {
+            try {
+                ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
+            } catch (const ::cc::Exception& a_cc_exception) {
+                // ... log ...
+                SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_WRN, a_activity, CC_JOB_LOG_STEP_RELAY,
+                                       CC_JOB_LOG_COLOR(RED) "Failed to relay ( forged ) message"
+                                       CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                       src_channel_key.c_str(), dst_channel_key.c_str(), a_cc_exception.what()
+                );
+            }
+        }
+        // ... at macOS and if debug mode ...
+        #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+            // ... if configured will sleep between message relay ...
+            Sleep (a_activity, "Sleeping between relays");
+        #endif
+    }
     
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_BEANSTALK,
                            "%s", "Pushing to beanstalkd");
     
-    Json::FastWriter jw; jw.omitEndingLineFeed();
-    
     // ... submit job to beanstalkd queue ...
-    PushJob(a_activity.payload()["tube"].asString(), jw.write(a_activity.payload()), a_activity.ttr());
+    PushJob(a_activity.payload()["tube"].asString(), jfw_.write(a_activity.payload()), a_activity.ttr());
     
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_BEANSTALK,
@@ -1838,4 +1873,33 @@ void casper::job::Sequencer::PatchObject (Json::Value& a_object, const std::func
             break;
     }
 }
+
+// MARK: -
+
+#if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+
+/**
+ * @brief Sleep between activity actions
+ *
+ * @param a_activity Running activity info.
+ * @param a_msg      Message to log along with sleep time in milliseconds.
+ *
+ */
+void casper::job::Sequencer::Sleep (const casper::job::sequencer::Activity& a_activity, const char* const a_msg)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... sleep?
+    if ( 0 != activity_config_.delay_.asUInt() ) {
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_INFO,
+                               CC_JOB_LOG_COLOR(WARNING) "%s" CC_LOGS_LOGGER_RESET_ATTRS " " UINT64_FMT "ms",
+                               a_msg,
+                               static_cast<uint64_t>(activity_config_.delay_.asUInt())
+        );
+        // ... do sleep ...
+        usleep(activity_config_.delay_.asUInt() * 1000);
+    }
+}
+
+#endif
 

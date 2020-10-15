@@ -166,6 +166,12 @@ namespace casper
             
             void               PatchObject        (Json::Value& a_value, const std::function<Json::Value(const std::string& a_expression)>& a_callback);
             
+            //
+            // DEBUG HELPER(S)
+            //
+#if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
+            void               Sleep (const sequencer::Activity& a_activity, const char* const a_msg);
+#endif
             
         protected: // Inline Method(s) // Function(s)
             
