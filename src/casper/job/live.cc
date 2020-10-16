@@ -36,7 +36,7 @@ const char* const casper::job::Live::s_tube_ = "sequencer-live";
  * param a_loggable_data
  * param a_config
  */
-casper::job::Live::Live (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config)
+casper::job::Live::Live (const ev::Loggable::Data& a_loggable_data, const cc::easy::job::Job::Config& a_config)
     : casper::job::Sequencer(s_tube_, a_loggable_data, a_config)
 {
     /* empty */
@@ -63,7 +63,7 @@ casper::job::Live::~Live ()
  * @param o_response JSON object.
  */
 void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
-                                 cc::job::easy::Job::Response& o_response)
+                             cc::easy::job::Job::Response& o_response)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     

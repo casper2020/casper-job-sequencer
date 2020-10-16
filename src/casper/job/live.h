@@ -40,13 +40,13 @@ namespace casper
         public: // Constructor(s) / Destructor
             
             Live () = delete;
-            Live (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config);
+            Live (const ev::Loggable::Data& a_loggable_data, const cc::easy::job::Job::Config& a_config);
             virtual ~Live ();
             
         public: // Inherited Virtual Method(s) / Function(s) - from ::Sequencer
             
             virtual void Run   (const int64_t& a_id, const Json::Value& a_payload,
-                                cc::job::easy::Job::Response& o_response);
+                                cc::easy::job::Job::Response& o_response);
 
         }; // end of class 'Live'
               

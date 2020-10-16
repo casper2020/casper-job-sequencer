@@ -23,7 +23,7 @@
 
 #include "version.h"
 
-#include "cc/job/easy/handler.h"
+#include "cc/easy/job/handler.h"
 
 #include "casper/job/live.h"
 
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     // tail -f /usr/local/var/log/casper-job-sequencer/sequencer-live.1.log | grep -E ', .*(SEQUENCE|ACTIVITY).*:'
     //
     
-    cc::job::easy::Handler::GetInstance().Start(
+    cc::easy::job::Handler::GetInstance().Start(
         /* a_arguments */
         {
             /* abbr_           */ CASPER_JOB_SEQUENCER_ABBR,
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
         /* a_factories */
         {
             {
-                casper::job::Live::s_tube_, [] (const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config) -> cc::job::easy::Job* {
+                casper::job::Live::s_tube_, [] (const ev::Loggable::Data& a_loggable_data, const cc::easy::job::Job::Config& a_config) -> cc::easy::job::Job* {
                     return new casper::job::Live(a_loggable_data, a_config);
                 }
             }

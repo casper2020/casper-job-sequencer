@@ -55,8 +55,8 @@ const std::map<std::string, casper::job::sequencer::Status> casper::job::Sequenc
  * param a_loggable_data
  * param a_config
  */
-casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config)
-    : cc::job::easy::Job(a_loggable_data, a_tube, a_config),      
+casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::easy::job::Job::Config& a_config)
+    : cc::easy::job::Job(a_loggable_data, a_tube, a_config),      
       sequence_config_(a_config.other()["sequence"]), activity_config_(a_config.other()["activity"])
 {
     jfw_.omitEndingLineFeed();

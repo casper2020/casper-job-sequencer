@@ -22,7 +22,7 @@
 #ifndef CASPER_JOB_SEQUENCER_H_
 #define CASPER_JOB_SEQUENCER_H_
 
-#include "cc/job/easy/job.h"
+#include "cc/easy/job/job.h"
 
 #include "json/json.h"
 
@@ -43,7 +43,7 @@ namespace casper
     namespace job
     {
     
-        class Sequencer : public cc::job::easy::Job
+        class Sequencer : public cc::easy::job::Job
         {
 
 #define SEQUENCER_LOG_KEY_JOB       "JOB"
@@ -93,7 +93,7 @@ namespace casper
         public: // Constructor(s) / Destructor
             
             Sequencer () = delete;
-            Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::job::easy::Job::Config& a_config);
+            Sequencer (const char* const a_tube, const ev::Loggable::Data& a_loggable_data, const cc::easy::job::Job::Config& a_config);
             virtual ~Sequencer ();
 
         protected: // Inherited Virtual Method(s) / Function(s) - from cc::job::easy::Runnable
