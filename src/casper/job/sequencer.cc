@@ -44,7 +44,8 @@ const char* const casper::job::Sequencer::s_table_  = "sequencer";
 const std::map<std::string, casper::job::sequencer::Status> casper::job::Sequencer::s_irj_teminal_status_map_ = {
     { "completed", casper::job::sequencer::Status::Done      },
     { "failed"   , casper::job::sequencer::Status::Failed    },
-    { "cancelled", casper::job::sequencer::Status::Cancelled }
+    { "error"    , casper::job::sequencer::Status::Error     },
+    { "cancelled", casper::job::sequencer::Status::Cancelled },
 };
 
 /**
@@ -386,7 +387,7 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     if ( sequencer::Status::Done == a_activity.status() ) {
         response_color = CC_JOB_LOG_COLOR(GREEN);
         status_color   = CC_JOB_LOG_COLOR(LIGHT_GREEN);
-    } else if ( sequencer::Status::Failed == a_activity.status() ) {
+    } else if ( sequencer::Status::Failed == a_activity.status() || sequencer::Status::Error == a_activity.status() ) {
         response_color = CC_JOB_LOG_COLOR(RED);
         status_color   = CC_JOB_LOG_COLOR(LIGHT_RED);
     } else {
@@ -773,7 +774,7 @@ void casper::job::Sequencer::ActivityReturned (const casper::job::sequencer::Tra
         } else {
             CC_WARNING_TODO("CJS: review IF");
             // ... a critical error occurred?
-            if ( sequencer::Status::Failed == returning_activity.status() ) {
+            if ( sequencer::Status::Failed == returning_activity.status() || sequencer::Status::Error == returning_activity.status() ) {
                 // ... activity payload must the the error do display ...
                 job_response = &returning_activity.payload();
             } else if ( sequencer::Status::Done == next.status() ) { // ... we're done?
@@ -970,7 +971,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 
                 //
                 // ... we're interested:
-                // ... ( completed, failed or cancelled )
+                // ... ( completed, failed, error or cancelled )
                 //
                 // ... - we've got all required data to finalize this inner job
                 // ... - we can launch the next inner job ( if required )

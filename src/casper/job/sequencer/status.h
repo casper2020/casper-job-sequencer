@@ -41,6 +41,7 @@ namespace casper
                     InProgress,
                     Done,
                     Cancelled,
+                    Error,
                     Failed
                 };
                 
@@ -58,6 +59,7 @@ namespace casper
                         case sequencer::Status::Done        : o_stream << "Done"        ; break;
                         case sequencer::Status::Cancelled   : o_stream << "Cancelled"   ; break;
                         case sequencer::Status::Failed      : o_stream << "Failed"      ; break;
+                        case sequencer::Status::Error       : o_stream << "Error"       ; break;
                         default                             : o_stream.setstate(std::ios_base::failbit); break;
                     }
                     return o_stream;
