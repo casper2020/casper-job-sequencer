@@ -79,6 +79,11 @@ casper::job::Sequencer::~Sequencer ()
     if ( nullptr != script_ ) {
         delete script_;
     }
+    // ... forget running activities ...
+    for ( auto it : running_activities_ ) {
+        delete it.second;
+    }
+    running_activities_.clear();
 }
 
 #ifdef __APPLE__
