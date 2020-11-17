@@ -98,7 +98,7 @@ void casper::job::Sequencer::Setup ()
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... prepare v8 simple expression evaluation script ...
-    script_ = new casper::job::sequencer::v8::Script(/* a_owner */ tube_, /* a_name */  tube_ + "." + std::to_string(config_.instance()),
+    script_ = new casper::job::sequencer::v8::Script(/* a_owner */ tube_, /* a_name */ config_.log_token(),
                                                      /* a_uri */ "thin air", /* a_out_path */ logs_directory()
     );
     // ... load it now ...
