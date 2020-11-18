@@ -70,11 +70,6 @@ casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable:
 casper::job::Sequencer::~Sequencer ()
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    // ... cancel any subscriptions ...
-    ExecuteOnMainThread([this] {
-         // ... unsubscribe from REDIS ...
-        ::ev::redis::subscriptions::Manager::GetInstance().Unubscribe(this);
-    }, /* a_blocking */ true);
     // ... forget v8 script ...
     if ( nullptr != script_ ) {
         delete script_;
@@ -107,6 +102,19 @@ void casper::job::Sequencer::Setup ()
     // SPECIAL CASE: we're interested in cancellation signals ( since we're running activites in sequence )
     //
     SetSignalsChannelListerer(std::bind(&casper::job::Sequencer::OnJobsSignalReceived, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+}
+
+/**
+ * @brief One-shot dismantling.
+ */
+void casper::job::Sequencer::Dismantle ()
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... cancel any subscriptions ...
+    ExecuteOnMainThread([this] {
+         // ... unsubscribe from REDIS ...
+        ::ev::redis::subscriptions::Manager::GetInstance().Unubscribe(this);
+    }, /* a_blocking */ true);
 }
 
 #ifdef __APPLE__

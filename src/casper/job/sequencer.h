@@ -98,7 +98,8 @@ namespace casper
 
         protected: // Inherited Virtual Method(s) / Function(s) - from cc::job::easy::Runnable
             
-            virtual void Setup ();
+            virtual void Setup     ();
+            virtual void Dismantle ();
 
         protected: // Method(s) / Function(s)
             
