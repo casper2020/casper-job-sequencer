@@ -49,8 +49,8 @@ int main(int argc, char** argv)
     //
     // tail -f /usr/local/var/log/casper-job-sequencer/sequencer-live.1.log | grep -E ', .*(SEQUENCE|ACTIVITY).*:'
     //
-    
-    cc::easy::job::Handler::GetInstance().Start(
+    // ... run ...
+    return cc::easy::job::Handler::GetInstance().Start(
         /* a_arguments */
         {
             /* abbr_           */ CASPER_JOB_SEQUENCER_ABBR,
