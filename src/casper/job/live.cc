@@ -176,9 +176,11 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         // ... set response code ...
         o_response.code_ = a_exception.code_;
 
+        Json::FastWriter fjw; fjw.omitEndingLineFeed();
+        
         // ... log payload ...
         SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_ERR, tracking.bjid_, CC_JOB_LOG_STEP_DUMP, "%s",
-                               json_writer_.write(a_payload).c_str()
+                               fjw.write(a_payload).c_str()
         );
 
         // ... log exception ...

@@ -84,11 +84,6 @@ namespace casper
             
             std::map<std::string, sequencer::Activity*> running_activities_; //!< RCID ( REDIS Channel ID ) -> Activity
             casper::job::sequencer::v8::Script*         script_;
-            
-        private: // Data ( TO BE USED ONLY ON 'THIS' THREAD CONTEXT )
-            
-            Json::FastWriter   jfw_;
-            Json::StyledWriter jsw_;
 
         public: // Constructor(s) / Destructor
             

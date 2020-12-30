@@ -59,7 +59,6 @@ casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable:
     : cc::easy::job::Job(a_loggable_data, a_tube, a_config),      
       sequence_config_(a_config.other()["sequence"]), activity_config_(a_config.other()["activity"])
 {
-    jfw_.omitEndingLineFeed();
     script_    = nullptr;
     log_level_ = static_cast<size_t>(std::max((int)a_config.log_level(), (int)log_level_));
 }
@@ -327,9 +326,11 @@ void casper::job::Sequencer::CancelSequence (const casper::job::sequencer::Activ
                             rtt
     );
 
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
+    
     // ... log sequence 'response' ...
     SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "Response: " CC_JOB_LOG_COLOR(ORANGE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           jfw_.write(a_response).c_str()
+                           ljfw.write(a_response).c_str()
     );
     
     // ... log sequence 'status' ...
@@ -413,9 +414,11 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
                             o_rtt
     );
 
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
+    
     // ... log sequence 'response' ...
     SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "Response: %s%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           response_color, jfw_.write(a_response).c_str()
+                           response_color, ljfw.write(a_response).c_str()
     );
     
     // ... log sequence 'status' ...
@@ -589,14 +592,15 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         // ... grab job object ...
         const auto job = GetJSONObject(a_activity.payload(), "job" , Json::ValueType::objectValue, /* a_default */ nullptr);
         // .. first, copy payload ( so it can be patched ) ...
-        Json::Value payload = job["payload"];
+        Json::Value        payload = job["payload"];
+        Json::StyledWriter jsw;
         // ... log ...
         CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= patching activity #" SIZET_FMT " - %s",
                            sequence.bjid(), ( a_activity.index() + 1 ), a_activity.rcid().c_str()
         );
         // ... debug only ..
         CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= before patch:\n%s",
-                         sequence.bjid(), jsw_.write(payload).c_str()
+                         sequence.bjid(), jsw.write(payload).c_str()
         );
         // ... set or overwrite 'id' and 'tube' properties ...
         payload["id"]   = std::to_string(job_defs.id_);
@@ -609,7 +613,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         }
         // ... debug only ...
         CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= after patch:\n%s",
-                         sequence.bjid(), jsw_.write(payload).c_str()
+                         sequence.bjid(), jsw.write(payload).c_str()
         );
         // ... log ...
         CC_DEBUG_LOG_MSG("job", "Job #" INT64_FMT " ~= patched activity #" SIZET_FMT " - %s",
@@ -711,11 +715,13 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     
     const std::string src_channel_key = a_activity.rcid();
     const std::string dst_channel_key = a_activity.sequence().rcid();
+    
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
 
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_RELAY,
                            CC_JOB_LOG_COLOR(YELLOW) "Relay message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           src_channel_key.c_str(), dst_channel_key.c_str(), jfw_.write(a_message).c_str()
+                           src_channel_key.c_str(), dst_channel_key.c_str(), ljfw.write(a_message).c_str()
     );
     try {
         Relay(a_activity.sequence().bjid(), dst_channel_key, a_message);
@@ -1112,6 +1118,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
+    
     // ... at macOS and if debug mode ...
     #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
         // ... if configured will sleep between message relay ...
@@ -1133,7 +1141,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_RELAY,
                                CC_JOB_LOG_COLOR(YELLOW) "Relay ( forged ) message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                               src_channel_key.c_str(), dst_channel_key.c_str(), jfw_.write(status).c_str()
+                               src_channel_key.c_str(), dst_channel_key.c_str(), ljfw.write(status).c_str()
         );
         try {
             Relay(a_activity.sequence().bjid(), dst_channel_key, status);
@@ -1161,7 +1169,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
                            "%s", "Pushing to beanstalkd");
     
     // ... submit job to beanstalkd queue ...
-    PushJob(a_activity.payload()["tube"].asString(), jfw_.write(a_activity.payload()), a_activity.ttr());
+    PushJob(a_activity.payload()["tube"].asString(), ljfw.write(a_activity.payload()), a_activity.ttr());
     
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_BEANSTALK,
@@ -1249,6 +1257,8 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
                             }
                         }
     );
+    
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
         
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_POSGRESQL,
@@ -1267,7 +1277,7 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
     );
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
                            "Response: " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           ( nullptr != a_response ? jfw_.write(*a_response).c_str() : "<empty>" )
+                           ( nullptr != a_response ? ljfw.write(*a_response).c_str() : "<empty>" )
     );
     
     // ... based on a_response, set activity status ...
@@ -1779,6 +1789,8 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     // V8 evaluation
     //
     ::v8::Persistent<::v8::Value> data;
+    
+    Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
 
     // ... load data to V8 ...
     try {
@@ -1790,7 +1802,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
             // ... log ...
             SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_activity.sequence(), CC_JOB_LOG_STEP_V8,
                                    "Data object: " CC_JOB_LOG_COLOR(LIGHT_BLUE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                                   jfw_.write(object).c_str()
+                                   ljfw.write(object).c_str()
             );
         } else {
             // ... log ...
@@ -1820,7 +1832,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_VBS, a_activity, CC_JOB_LOG_STEP_V8,
                            "Patching payload: " CC_JOB_LOG_COLOR(WHITE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           jfw_.write(payload).c_str()
+                           ljfw.write(payload).c_str()
     );
     
     // ... traverse JSON and evaluate 'String' fields ...
@@ -1857,7 +1869,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     // ... log ...
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_V8,
                            "Payload patched: " CC_JOB_LOG_COLOR(LIGHT_CYAN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           jfw_.write(payload).c_str()
+                           ljfw.write(payload).c_str()
     );
 
     // ... set patched payload as activity new payload ....
