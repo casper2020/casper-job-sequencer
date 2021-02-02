@@ -551,7 +551,7 @@
 /* Begin XCBuildConfiguration section */
 		47F37F772484FAB600493361 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 47F37FAB2484FDBB00493361 /* debug.xcconfig */;
+			baseConfigurationReference = 47F37FAA2484FDBB00493361 /* common.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = x86_64;
@@ -628,7 +628,7 @@
 		};
 		47F37F782484FAB600493361 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 47F37FAC2484FDBB00493361 /* release.xcconfig */;
+			baseConfigurationReference = 47F37FAA2484FDBB00493361 /* common.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = x86_64;
