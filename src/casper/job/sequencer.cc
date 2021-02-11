@@ -196,7 +196,7 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
             // ... NOT provided, set as the sum of it's activities 'validity' values ...
             seq_validity = seq_validity_sum;
             SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_IN, "Validity not provided, setting " UINT64_FMT, static_cast<uint64_t>(seq_validity));
-        }else if ( seq_job_validity < seq_validity_sum ) {
+        } else if ( seq_job_validity < seq_validity_sum ) {
             // ... provided, BUT 'validity' value is lower than the sum of it's activities 'validity' values ...
             throw sequencer::BadRequestException(tracking,
                                                  ( "Provided sequence 'validity' value ( " +
