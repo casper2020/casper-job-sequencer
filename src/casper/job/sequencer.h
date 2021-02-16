@@ -68,6 +68,12 @@ namespace casper
                 SEQUENCER_LOG_KEY_JOB, a_step, __VA_ARGS__ \
     );
 
+#define SEQUENCER_LOG_CRITICAL_EXCEPTION(a_format, ...) \
+    CC_JOB_LOG(CC_JOB_LOG_LEVEL_CRT, uint64_t(0), \
+                CC_JOB_LOG_COLOR(LIGHT_RED) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                SEQUENCER_LOG_KEY_SEQUENCE, CC_JOB_LOG_STEP_ERROR, __VA_ARGS__ \
+    );
+
         public: // Static Const Data
             
             static const char* const s_schema_;
@@ -156,7 +162,7 @@ namespace casper
             //
             // SERIALIZATION HELPERS
             //
-            const Json::Value& AsJSON (const std::string& a_value, Json::Value& o_value);
+            const Json::Value& MSG2JSON           (const std::string& a_value, Json::Value& o_value);
             
             void               PatchActivity      (const sequencer::Tracking& a_tracking, sequencer::Activity& a_activity);
             

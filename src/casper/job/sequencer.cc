@@ -938,7 +938,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
     ScheduleCallbackOnLooperThread(/* a_id */ "sequencer-activity-message-callback",
                                    /* a_callback */ [this, a_id, a_message](const std::string& /* a_id */) {
         
-        sequencer::Sequence*  sequence  = nullptr;
+            sequencer::Sequence*  sequence  = nullptr;
             sequencer::Exception* exception = nullptr;
 
             CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
@@ -959,7 +959,7 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 Json::Value  object;
                 
                 // ... parse JSON message ...
-                AsJSON(a_message, object);
+                MSG2JSON(a_message, object);
                 
                 // ... check this inner job status ...
                 const std::string status = object.get("status", "").asCString();
@@ -1017,47 +1017,70 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                 // ... copy exception ...
                 exception = new sequencer::Exception(a_sq_exception);
                 // ... log it ...
-                CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
-                                 sequence->bjid(), a_id.c_str(), a_sq_exception.what()
-                );
+                if ( nullptr != sequence ) {
+                    CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
+                                     sequence->bjid(), a_id.c_str(), a_sq_exception.what()
+                    );
+                }
             } catch (const ::cc::Exception& a_cc_exception) {
-                // ... copy exception ...
-                exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
-                // ... log it ...
-                CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
-                                 sequence->bjid(), a_id.c_str(), a_cc_exception.what()
-                );
-            } catch (...) {
-                try {
-                    ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
-                } catch (const ::cc::Exception& a_cc_exception) {
+                // ... if sequence found ...
+                if ( nullptr != sequence ) {
                     // ... copy exception ...
-                    exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                    exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
                     // ... log it ...
                     CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
                                      sequence->bjid(), a_id.c_str(), a_cc_exception.what()
                     );
+                } else {
+                    // ... copy exception ...
+                    exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(0, "CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                }
+            } catch (...) {
+                try {
+                    ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
+                } catch (const ::cc::Exception& a_cc_exception) {
+                    // ... if sequence found ...
+                    if ( nullptr != sequence ) {
+                        // ... copy exception ...
+                        exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(sequence->bjid(), "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                        // ... log it ...
+                        CC_JOB_LOG_TRACE(CC_JOB_LOG_LEVEL_DBG, "Job #" INT64_FMT "'%s': %s",
+                                         sequence->bjid(), a_id.c_str(), a_cc_exception.what()
+                        );
+                    } else {
+                        // ... copy exception ...
+                        exception = new sequencer::Exception(SEQUENCER_TRACK_CALL(0, "GENERIC CC EXCEPTION CAUGHT"), /* a_code */ 500, a_cc_exception.what());
+                    }
                 }
             }
 
-            // ... can't accept if no sequence is set ...
-            CC_ASSERT(nullptr != sequence);
-
-            // ... if an exception was thrown ...
-            if ( nullptr != exception ) {
-                //
-                Json::Value response = Json::Value::null;
-                // ... build response ..
-                (void)SetFailedResponse(exception->code_, response);
-                // ... notify 'job finished' ...
-                FinalizeJob(*sequence, response);
-                // ... cleanup ...
-                delete sequence;
-                delete exception;
+            // ... accepted if sequence is set ...
+            if ( nullptr != sequence ) {
+                // ... if an exception was thrown ...
+                if ( nullptr != exception ) {
+                    //
+                    Json::Value response = Json::Value::null;
+                    // ... build response ..
+                    (void)SetFailedResponse(exception->code_, response);
+                    // ... notify 'job finished' ...
+                    FinalizeJob(*sequence, response);
+                    // ... cleanup ...
+                    delete sequence;
+                    delete exception;
+                } else {
+                    // ... cleanup ...
+                    delete sequence;
+                }
             } else {
-                // ... cleanup ...
-                delete sequence;
+                // ...sequence NOT set, is exception set?
+                if ( nullptr != exception ) {
+                    // ... log it ...
+                    SEQUENCER_LOG_CRITICAL_EXCEPTION("%s", exception->what());
+                    // ... cleanup ...
+                    delete exception;
+                }
             }
+
         
     });
     
@@ -1704,17 +1727,49 @@ const ::ev::postgresql::Value* casper::job::Sequencer::EnsurePostgreSQLValue (co
 }
 
 /**
- * @brief Serialize a JSON string to a JSON Object.
+ * @brief Serialize a JOB message JSON string to a JSON Object.
  *
  * @param a_value JSON string to parse.
  * @param o_value JSON object to fill.
 */
-const Json::Value& casper::job::Sequencer::AsJSON (const std::string& a_value, Json::Value& o_value)
+const Json::Value& casper::job::Sequencer::MSG2JSON (const std::string& a_value, Json::Value& o_value)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    
-    ParseJSON(a_value, o_value);
-    
+    // ... invalid, primitive or JSON protocol?
+    if ( 0 == a_value.length() ) {
+        throw ::cc::Exception("Invalid message: '%s' - no data to process!", a_value.c_str());
+    } else if ( '*' == a_value.c_str()[0] ) {
+        // expecting: *<status-code-int-value>,<content-type-length-in-bytes>,<content-type-string-value>,<body-length-bytes>,<body>
+        const char* const c_str = a_value.c_str();
+        struct P { const char* start_; const char* end_; unsigned unsigned_value_; };
+        P p [3];
+        p[0] = { c_str + 1, strchr(c_str + 1, ','), 0 }; /* status code @ unsigned_value            */
+        p[1] = { nullptr  , nullptr               , 0 }; /* content-type - IGNORED - EXPECTING JSON */
+        p[2] = { nullptr  , nullptr               , 0 }; /* body         - IGNORED                  */
+        // ... read status code ....
+        if ( nullptr == p[0].end_ || 1 != sscanf(p[0].start_, "%u", &p[0].unsigned_value_) ) {
+            throw ::cc::Exception("Invalid message: unable to read '%s' from primitive protocol message!", "status code");
+        } else {
+            // ... read all other components ...
+            for ( size_t idx = 1 ; idx < ( sizeof(p) / sizeof(p[0]) ) ; ++idx ) {
+                if ( 1 != sscanf(p[idx-1].end_ + sizeof(char), "%u", &p[idx].unsigned_value_) ) {
+                    throw ::cc::Exception("Invalid message: unable to read field #'" SIZET_FMT "' from primitive protocol message!", idx);
+                }
+                p[idx].start_ = strchr(p[idx-1].end_ + sizeof(char), ',');
+                if ( nullptr == p[idx].start_ ) {
+                    throw ::cc::Exception("Invalid message: invalid field #'" SIZET_FMT "' value read from primitive protocol message!", idx);
+                }
+                p[idx].start_ += sizeof(char);
+                p[idx].end_    = p[idx].start_ + p[idx].unsigned_value_;
+            }
+            // ... good to go ...
+            ParseJSON(std::string(p[2].start_, p[2].unsigned_value_), o_value);
+        }
+    } else {
+        // ... JSON is expected ...
+        ParseJSON(a_value, o_value);
+    }
+    // ... done ...
     return o_value;
 }
 
