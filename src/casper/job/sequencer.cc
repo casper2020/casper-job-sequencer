@@ -398,15 +398,19 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     // ... pick log color  ...
     const char* response_color;
     const char* status_color;
+    std::string job_status;
     if ( sequencer::Status::Done == a_activity.status() ) {
         response_color = CC_JOB_LOG_COLOR(GREEN);
         status_color   = CC_JOB_LOG_COLOR(LIGHT_GREEN);
+        job_status     = "Succeeded";
     } else if ( sequencer::Status::Failed == a_activity.status() || sequencer::Status::Error == a_activity.status() ) {
         response_color = CC_JOB_LOG_COLOR(RED);
         status_color   = CC_JOB_LOG_COLOR(LIGHT_RED);
+        job_status     = "Failed";
     } else {
         response_color = CC_JOB_LOG_COLOR(ORANGE);
         status_color   = CC_JOB_LOG_COLOR(ORANGE);
+        job_status     = ss.str();
     }
 
     // ... log sequence 'rtt' ...
@@ -426,9 +430,15 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
                            status_color, ss.str().c_str()
     );
             
+    // ... response ...
+    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_OUT,
+                      "Response: %s%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                      response_color, ljfw.write(a_response).c_str()
+    );
+    
     // ... log job 'status' ..
-    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_OUT, "%s%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                      status_color, ss.str().c_str()
+    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_STATUS, "%s%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                      status_color, job_status.c_str()
     );
 }
 
