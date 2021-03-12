@@ -28,6 +28,9 @@
 #include "cc/macros.h"
 #include "cc/types.h"
 
+#include "cc/easy/json.h"
+#include "cc/i18n/singleton.h"
+
 CC_WARNING_TODO("CJS: review all comments and parameters names");
 
 CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread");
@@ -435,7 +438,29 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
                       "Response: %s%s" CC_LOGS_LOGGER_RESET_ATTRS,
                       response_color, ljfw.write(a_response).c_str()
     );
+        
     
+    uint16_t    status_code;
+    std::string status_name;
+    try {
+        status_code = static_cast<uint16_t>(GetJSONObject(a_response, "status_code", Json::ValueType::uintValue, &Json::Value::null).asUInt());
+        const auto it = ::cc::i18n::Singleton::k_http_status_codes_map_.find(status_code);
+        if ( ::cc::i18n::Singleton::k_http_status_codes_map_.end() != it ) {
+            status_name = it->second;
+        } else {
+            status_name = "???";
+        }
+    } catch (...) {
+        status_code = 0;
+        status_name = "<undefined>";
+    }
+    
+    // ... HTTP status ...
+    SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_OUT,
+                      "Status: %s" UINT16_FMT " - %s" CC_LOGS_LOGGER_RESET_ATTRS,
+                      status_color, status_code, status_name.c_str()
+    );
+
     // ... log job 'status' ..
     SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_STATUS, "%s%s" CC_LOGS_LOGGER_RESET_ATTRS,
                       status_color, job_status.c_str()
