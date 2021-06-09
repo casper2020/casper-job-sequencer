@@ -520,7 +520,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n__current_version=`egrep -n  \"CASPER_JOB_SEQUENCER_VERSION\\ \\\".*\\\"$\" ${SRCROOT}/src/version.h  | cut -d'\"' -f2`\n__target_version=`cat ${SRCROOT}/../casper-packager/casper-job-sequencer/version`\nif [ \"${__current_version}\" != \"${__target_version}\" ] ; then\n    make -f Makefile TARGET=${CONFIGURATION} version\nfi\n";
+			shellScript = "__current_version=`egrep -n  \"CASPER_JOB_SEQUENCER_VERSION\\ \\\".*\\\"$\" ${SRCROOT}/src/version.h  | cut -d'\"' -f2`\n__target_version=`cat ${SRCROOT}/../casper-packager/casper-job-sequencer/version`\nif [ \"${__current_version}\" != \"${__target_version}\" ] ; then\n    make -f Makefile TARGET=${CONFIGURATION} version\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
