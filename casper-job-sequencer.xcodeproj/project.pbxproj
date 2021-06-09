@@ -520,7 +520,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "__current_version=`egrep -n  \"CASPER_JOB_SEQUENCER_VERSION\\ \\\".*\\\"$\" ${SRCROOT}/src/version.h  | cut -d'\"' -f2`\n__target_version=`cat ${SRCROOT}/../casper-packager/casper-job-sequencer/version`\nif [ \"${__current_version}\" != \"${__target_version}\" ] ; then\n    make -f Makefile TARGET=${CONFIGURATION} version\nfi\n";
+			shellScript = "if [ -f ${SRCROOT}/src/version.h ] ; then\n    __current_version=`egrep -n  \"CASPER_JOB_SEQUENCER_VERSION\\ \\\".*\\\"$\" ${SRCROOT}/src/version.h  | cut -d'\"' -f2`\n    __target_version=`cat ${SRCROOT}/../casper-packager/casper-job-sequencer/version`\n    if [ \"${__current_version}\" != \"${__target_version}\" ] ; then\n        make -f Makefile TARGET=${CONFIGURATION} version\n    fi\nelse\n    make -f Makefile TARGET=${CONFIGURATION} version\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
