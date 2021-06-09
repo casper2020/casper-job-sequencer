@@ -56,7 +56,9 @@ int main(int argc, char** argv)
             /* abbr_           */ CASPER_JOB_SEQUENCER_ABBR,
             /* name_           */ CASPER_JOB_SEQUENCER_NAME,
             /* version_        */ CASPER_JOB_SEQUENCER_VERSION,
-            /* rel_date_       */ CASPER_JOB_SEQUENCER_VERSION,
+            /* rel_date_       */ CASPER_JOB_SEQUENCER_REL_DATE,
+            /* rel_branch_     */ CASPER_JOB_SEQUENCER_REL_BRANCH,
+            /* rel_hash_       */ CASPER_JOB_SEQUENCER_REL_HASH,
             /* info_           */ short_info, // short version of CASPER_JOB_SEQUENCER_INFO
             /* banner_         */ CASPER_JOB_SEQUENCER_BANNER,
             /* argc_           */ argc,

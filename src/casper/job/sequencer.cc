@@ -1582,7 +1582,7 @@ void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const s
     
             CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
 
-        //
+            //
             // Process cancellation message.
             //
             const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(static_cast<int64_t>(a_id), "JOBS SIGNALS MESSAGE RECEIVED");

@@ -358,6 +358,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 47F37F792484FAB600493361 /* Build configuration list for PBXNativeTarget "casper-job-sequencer" */;
 			buildPhases = (
+				4717F0DB2670BF4100490B01 /* ShellScript */,
 				47F37F6E2484FAB600493361 /* Sources */,
 				47F37F6F2484FAB600493361 /* Frameworks */,
 				47F37F702484FAB600493361 /* CopyFiles */,
@@ -502,6 +503,26 @@
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4717F0DB2670BF4100490B01 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n__current_version=`egrep -n  \"CASPER_JOB_SEQUENCER_VERSION\\ \\\".*\\\"$\" ${SRCROOT}/src/version.h  | cut -d'\"' -f2`\n__target_version=`cat ${SRCROOT}/../casper-packager/casper-job-sequencer/version`\nif [ \"${__current_version}\" != \"${__target_version}\" ] ; then\n    make -f Makefile TARGET=${CONFIGURATION} version\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		47F37F6E2484FAB600493361 /* Sources */ = {
