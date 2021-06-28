@@ -725,6 +725,11 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					"V8_COMPRESS_POINTERS=1",
+				);
 				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -778,6 +783,10 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
+					"V8_COMPRESS_POINTERS=1",
+				);
 				GCC_WARN_SIGN_COMPARE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",

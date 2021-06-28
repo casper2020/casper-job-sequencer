@@ -151,7 +151,7 @@ void casper::job::sequencer::v8::Script::SetData (const char* const a_name, cons
                             
                      ::v8::Local<::v8::Object> object = ::v8::Object::New(a_isolate);
                                                         
-                     object->Set(key, value);
+                     object->Set(a_context, key, value).Check();
                      if ( nullptr != o_object ) {
                          o_object->Reset(a_isolate, object);
                      }
