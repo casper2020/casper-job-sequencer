@@ -70,7 +70,7 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
     //   {
     //      "id": "1",
     //      "ttr": 360,
-    //      "valitity": 500,
+    //      "validity": 500,
     //      "tube": "sequencer-live",
     //      "jobs": [
     //          {
