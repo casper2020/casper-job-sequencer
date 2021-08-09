@@ -20,6 +20,7 @@
 		47F37FE12484FE5300493361 /* libjsoncpp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FD12484FE2B00493361 /* libjsoncpp.a */; };
 		47F37FEB2484FF7800493361 /* sequencer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 47F37FEA2484FF7800493361 /* sequencer.cc */; };
 		47F37FF6248501C700493361 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47F37FF5248501C700493361 /* Security.framework */; };
+		C16D662026C04A6D003B8D8A /* libapple_nghttp2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = C16D661F26C04A6D003B8D8A /* libapple_nghttp2.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,6 +172,7 @@
 		47F37FEA2484FF7800493361 /* sequencer.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sequencer.cc; sourceTree = "<group>"; };
 		47F37FEC2484FFA000493361 /* sequencer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequencer.h; sourceTree = "<group>"; };
 		47F37FF5248501C700493361 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		C16D661F26C04A6D003B8D8A /* libapple_nghttp2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libapple_nghttp2.tbd; path = usr/lib/libapple_nghttp2.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -184,6 +186,7 @@
 				47F37FDD2484FE5300493361 /* libbeanstalk-client.a in Frameworks */,
 				47F37FE02484FE5300493361 /* libhiredis.a in Frameworks */,
 				47F37FE12484FE5300493361 /* libjsoncpp.a in Frameworks */,
+				C16D662026C04A6D003B8D8A /* libapple_nghttp2.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,6 +329,7 @@
 		47F37FDC2484FE5300493361 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C16D661F26C04A6D003B8D8A /* libapple_nghttp2.tbd */,
 				47F37FF5248501C700493361 /* Security.framework */,
 			);
 			name = Frameworks;
@@ -737,10 +741,9 @@
 					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent.a",
 					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/lib/libpq.a",
 					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/lib/libz.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
+					"$(V8_LIBICUI18N)",
+					"$(V8_LIBICUUC)",
+					"$(V8_LIB)",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.cldware.casper-job-sequencer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -794,10 +797,9 @@
 					"$(SRCROOT)/../casper-packager/libevent2/darwin/pkg/$(CONFIGURATION)/libevent2/usr/local/casper/libevent2/lib/libevent.a",
 					"$(SRCROOT)/../casper-packager/postgresql/darwin/pkg/$(CONFIGURATION)/postgresql/usr/local/casper/postgresql/lib/libpq.a",
 					"$(SRCROOT)/../casper-packager/zlib/darwin/pkg/$(CONFIGURATION)/zlib/usr/local/casper/zlib/lib/libz.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicui18n.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/third_party/icu/libicuuc.a",
-					"$(SRCROOT)/../v8/out.gn/x64.$(CONFIGURATION::rfc1034identifier:lower)/obj/libv8_monolith.a",
+					"$(V8_LIBICUI18N)",
+					"$(V8_LIBICUUC)",
+					"$(V8_LIB)",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.cldware.casper-job-sequencer";
 				PRODUCT_NAME = "$(TARGET_NAME)";
