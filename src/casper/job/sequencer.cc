@@ -966,12 +966,12 @@ void casper::job::Sequencer::SubscribeActivity (const casper::job::sequencer::Ac
 EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActivityMessageReceived (const std::string& a_id, const std::string& a_message)
 {
     
-    CC_WARNING_TODO("CJS: HANDLE CANCELLATION MESSAGE!!");
-    
     CC_DEBUG_FAIL_IF_NOT_AT_MAIN_THREAD();
     
-    ScheduleCallbackOnLooperThread(/* a_id */ "sequencer-activity-message-callback",
-                                   /* a_callback */ [this, a_id, a_message](const std::string& /* a_id */) {
+    
+    ScheduleCallbackOnLooperThread(/* a_id */ MakeID("sequencer-activity-message-callback", a_id),
+        /* a_callback */
+        [this, a_id, a_message](const std::string& /* a_id */) {
         
             sequencer::Sequence*  sequence  = nullptr;
             sequencer::Exception* exception = nullptr;
@@ -1115,8 +1115,6 @@ EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK casper::job::Sequencer::OnActiv
                     delete exception;
                 }
             }
-
-        
     });
     
     // ... we're done ..
@@ -1577,7 +1575,8 @@ void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const s
         return;
     }
     
-    ScheduleCallbackOnLooperThread("sequence-jobs-signals-callback",
+    ScheduleCallbackOnLooperThread(/* a_id */ MakeID("sequencer-jobs-signals-callback", std::to_string(a_id)),
+        /* a_callback */
        [this, a_id, a_status, a_message](const std::string& /* a_id */) {
     
             CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);

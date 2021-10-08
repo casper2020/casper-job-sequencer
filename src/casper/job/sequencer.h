@@ -177,7 +177,8 @@ namespace casper
             
         protected: // Inline Method(s) // Function(s)
             
-            void                                 LogStats () const;
+            void        LogStats () const;
+            std::string MakeID   (const char* const a_name, const std::string a_rcid);
 
         }; // end of class 'Sequencer'
     
@@ -191,6 +192,24 @@ namespace casper
                                 "STATS",
                                 std::to_string(running_activities_.size()) + " " + ( 1 == running_activities_.size()  ? "activity is"  : "activities are" ) + " running"
             );
+        }
+        
+        /**
+         * @brief Build an ID with a random part.
+         *
+         * @param a_name Tag.
+         * @param a_rcid Activity REDIS channel id.
+         *
+         * @return Ramdom ID.
+         */
+        inline std::string Sequencer::MakeID (const char* const a_name, const std::string a_rcid)
+        {
+            static const char alphanum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            std::stringstream ss;
+            for ( int idx = 0; idx < 32; ++idx ) {
+                ss << alphanum[random() % 62];
+            }
+            return std::string(a_name) + "-" + a_rcid + "-" + ss.str();
         }
               
     } // end of namespace 'job'
