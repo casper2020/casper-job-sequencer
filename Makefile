@@ -63,7 +63,7 @@ include $(PACKAGER_DIR)/common/c++/common.mk
 # dependencies
 CASPER_JOB_SEQUENCER_DEPENDENCIES := \
 	casper-connectors-v8-dep-on \
-	casper-osal-dep-on \
+	casper-osal-v8-dep-on \
 	postgresql-dep-on \
 	v8-dep-on \
 	curl-dep-on \
