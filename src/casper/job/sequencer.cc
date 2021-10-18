@@ -750,6 +750,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
     
     const std::string src_channel_key = a_activity.rcid();
     const std::string dst_channel_key = a_activity.sequence().rcid();
+    const std::string dst_job_key     = a_activity.sequence().rjid();
     
     Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
 
@@ -759,7 +760,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
                            src_channel_key.c_str(), dst_channel_key.c_str(), ljfw.write(a_message).c_str()
     );
     try {
-        Relay(a_activity.sequence().bjid(), dst_channel_key, a_message);
+        Relay(a_activity.sequence().bjid(), dst_channel_key, dst_job_key, a_message);
     } catch (...) {
         try {
             ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
@@ -1186,6 +1187,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     {
         const std::string src_channel_key = a_activity.rcid();
         const std::string dst_channel_key = a_activity.sequence().rcid();
+        const std::string dst_job_key     = a_activity.sequence().rjid();
         Json::Value       status          = Json::Value(Json::ValueType::objectValue);
         status["status"]                  = "reset";
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
@@ -1200,7 +1202,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
                                src_channel_key.c_str(), dst_channel_key.c_str(), ljfw.write(status).c_str()
         );
         try {
-            Relay(a_activity.sequence().bjid(), dst_channel_key, status);
+            Relay(a_activity.sequence().bjid(), dst_channel_key, dst_job_key, status);
         } catch (...) {
             try {
                 ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
@@ -1383,7 +1385,7 @@ void casper::job::Sequencer::CancelActivity (const casper::job::sequencer::Activ
     UnsubscribeActivity(activity);
 
     // ... signal activity's job to cancel ...
-    Cancel(activity.sequence().bjid(), activity.rcid());
+    Cancel(activity.sequence().bjid(), activity.rcid(), activity.rjid());
 }
 
 #ifdef __APPLE__
@@ -1537,6 +1539,7 @@ void casper::job::Sequencer::FinalizeJob (const sequencer::Sequence& a_sequence,
     // ... publish result ...
     Finished(/* a_id               */ a_sequence.bjid(),
              /* a_channel          */ a_sequence.rcid(),
+             /* a_job              */ a_sequence.rjid(),
              /* a_response         */ a_response,
              /* a_success_callback */
              [this, &a_response]() {
