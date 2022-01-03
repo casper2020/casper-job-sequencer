@@ -62,8 +62,7 @@ casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable:
     : cc::easy::job::Job(a_loggable_data, a_tube, a_config),      
       sequence_config_(a_config.other()["sequence"]), activity_config_(a_config.other()["activity"])
 {
-    script_    = nullptr;
-    log_level_ = static_cast<size_t>(std::max((int)a_config.log_level(), (int)log_level_));
+    script_ = nullptr;
 }
 
 /**
