@@ -501,6 +501,9 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         std::string channel_;
         uint16_t    sc_;
         std::string ew_; // exception 'what'
+        std::string abort_expr_;
+        Json::Value abort_result_;
+        bool        subscribed_;
     } ActivityJob;
     
     ActivityJob job_defs;
@@ -512,15 +515,22 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         job_defs.expires_in_ = GetJSONObject(job                 , "validity", Json::ValueType::intValue   , &activity_config_.validity_).asUInt();
         job_defs.ttr_        = GetJSONObject(job                 , "ttr"     , Json::ValueType::intValue   , &activity_config_.ttr_).asUInt();
         
+        const auto& abort_expr = GetJSONObject(job, "abort_expr", Json::ValueType::stringValue, &Json::Value::null);
+        if ( false == abort_expr.isNull() ) {
+            job_defs.abort_expr_ = abort_expr.asString();
+        }
+        
     } catch (const ev::Exception& a_ev_exception) {
         throw sequencer::JSONValidationException(a_tracking, a_ev_exception.what());
     }
     
-    job_defs.id_         = 0;
-    job_defs.key_        = ( config_.service_id() + ":jobs:" + job_defs.tube_ + ':' );
-    job_defs.channel_    = ( config_.service_id() + ':'      + job_defs.tube_ + ':' );
-    job_defs.sc_         = 500;
-    job_defs.ew_         = "";
+    job_defs.id_           = 0;
+    job_defs.key_          = ( config_.service_id() + ":jobs:" + job_defs.tube_ + ':' );
+    job_defs.channel_      = ( config_.service_id() + ':'      + job_defs.tube_ + ':' );
+    job_defs.sc_           = 500;
+    job_defs.ew_           = "";
+    job_defs.abort_result_ = Json::Value::null;
+    job_defs.subscribed_   = false;
     
     // ...
     osal::ConditionVariable cv;
@@ -657,23 +667,28 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         a_activity.SetPayload(payload);
         a_activity.SetTTR(job_defs.ttr_);
         a_activity.SetValidity(job_defs.ttr_);
+        a_activity.SetAbortExpr(job_defs.abort_expr_);
         // ... if required, evaluate all string fields as V8 expressions ...
-        PatchActivity(a_tracking, a_activity);
+        PatchActivity(a_tracking, a_activity, job_defs.abort_result_);
         // ... now register activity attempt to launch @ db ...
         RegisterActivity(a_activity);
         // ... track activity ...
         TrackActivity(a_activity);
-        // ... then, listen to REDIS job channel ...
-        SubscribeActivity(a_activity);
-        // ... now, push job ( send it to beanstalkd ) ...
-        PushActivity(a_activity);
+        // ... NOT aborted?
+        if ( true == job_defs.abort_result_.isNull() ) {
+            // ... then, listen to REDIS job channel ...
+            SubscribeActivity(a_activity);
+            job_defs.subscribed_ = true;
+            // ... now, push job ( send it to beanstalkd ) ...
+            PushActivity(a_activity);
+        }
     } catch (const sequencer::V8ExpressionEvaluationException& a_v8eee) {
         exception = new sequencer::V8ExpressionEvaluationException(a_tracking, a_v8eee);
     } catch (...) {
         // ... recapture exception ...
         try {
             // ... first rethrow ...
-            ::cc::Exception::Rethrow(/* a_unhandled */ true, __FILE__, __LINE__, __FUNCTION__);
+            ::cc::Exception::Rethrow(/* a_unhandled */ false, __FILE__, __LINE__, __FUNCTION__);
         } catch (::cc::Exception& a_cc_exception) {
             // ... copy exception ...
             exception = new sequencer::Exception(a_tracking, 400, a_cc_exception.what());
@@ -681,17 +696,19 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     }
     
     if ( nullptr != exception ) {
-        // ... TODO ..
-        CC_WARNING_TODO("CJS: TEST THIS CODE");
+        // ... set status code ...
+        job_defs.sc_ = exception->code_;
         // ... forget tmp payload ...
         a_activity.SetPayload(Json::Value::null);
         // ... and this activity ...
         UntrackActivity(a_activity); // ... ⚠️  a_activity STILL valid - it's the original one! ⚠️ ...
-        // ... unsubscribe activity ...
-        UnsubscribeActivity(a_activity);
+        // ... unsubscribe activity?
+        if ( true == job_defs.subscribed_ ) {
+            UnsubscribeActivity(a_activity);
+        }
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_ERR, a_activity, CC_JOB_LOG_STEP_ERROR,
-                               "An error occurred while launching activity ~ %s",
+                               "An error occurred while launching activity ~ " CC_JOB_LOG_COLOR(RED) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
                                exception->what()
         );
         // ... if at 'run' function ...
@@ -706,9 +723,11 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
             // ... exceptions can be thrown here ...
             throw copy;
         } else {
-            Json::Value errors = Json::Value::null;
+            Json::Value payload  = Json::Value(Json::ValueType::objectValue);
+            payload["exception"] = exception->what();
+            Json::Value errors  = Json::Value::null;
             // ... override with errors serialization ...
-            (void)SetFailedResponse(/* a_code */ exception->code_, errors);
+            (void)SetFailedResponse(/* a_code */ exception->code_, payload, errors);
             // ... reset
             a_activity.Reset(sequencer::Status::Failed, /* a_payload */ errors);
             // ... get rid of exception ...
@@ -725,10 +744,34 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     // ... reset ptr ...
     a_activity.SetPayload(Json::Value::null);
     
-    // ... log ...
-    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
-                           "Launched with REDIS channel ID %s", a_activity.rcid().c_str());
-    
+    // ... aborted?
+    if ( false == job_defs.abort_result_.isNull() ) {
+        // ... set status code ...
+        job_defs.sc_ = static_cast<uint16_t>(job_defs.abort_result_["status_code"].asUInt());
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               CC_JOB_LOG_COLOR(YELLOW) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               "ABORTING as requested by 'abort_expr' evaluation...");
+        // ... and this activity ...
+        UntrackActivity(a_activity); // ... ⚠️  a_activity STILL valid - it's the original one! ⚠️ ...
+        // ... unsubscribe activity?
+        if ( true == job_defs.subscribed_ ) {
+            UnsubscribeActivity(a_activity);
+        }
+        // ... override with errors serialization ...
+        Json::Value response;
+        (void)SetFailedResponse(/* a_code */ job_defs.sc_, job_defs.abort_result_, response);
+        // ... reset
+        a_activity.Reset(sequencer::Status::Failed, /* a_payload */ response);
+        if ( false == a_at_run ) {
+            // ... just 'finalize' activity ( by setting failed status ) ...
+            (void)ActivityReturned(a_tracking, a_activity, /* a_response */ nullptr);
+        }
+    } else if ( sequencer::Status::Failed != a_activity.status() ) {
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "Launched with REDIS channel ID %s", a_activity.rcid().c_str());
+    }
     // ... we're done ...
     return job_defs.sc_;
 }
@@ -767,8 +810,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
             CC_WARNING_TODO("CJS: HANDLE EXCEPTION");
             // ... log ...
             SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_WRN, a_activity, CC_JOB_LOG_STEP_RELAY,
-                                   CC_JOB_LOG_COLOR(RED) "Failed to relay message"
-                                        CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                   CC_JOB_LOG_COLOR(RED) "Failed to relay message" CC_LOGS_LOGGER_RESET_ATTRS " from %s to %s, " CC_JOB_LOG_COLOR(DARK_GRAY) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
                                    src_channel_key.c_str(), dst_channel_key.c_str(), a_cc_exception.what()
             );
         }
@@ -1299,7 +1341,7 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
     ExecuteQueryAndWait(/* a_tracking         */ SEQUENCER_TRACK_CALL(a_activity.sequence().bjid(), "FINALIZING ACTIVITY"),
                         /* a_query            */ ss.str(), /* a_expect   */ ExecStatusType::PGRES_TUPLES_OK,
                         /* a_success_callback */
-                        [&o_next, &rtt] (const Json::Value& a_value) {
+                        [this, &o_next, &rtt] (const Json::Value& a_value) {
                             // ... array is expected ...
                             if ( a_value.size() > 0 ) {
                                 // ... ⚠️ we're returning the last activity rtt in the next activity ...
@@ -1310,6 +1352,11 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
                                     o_next.Reset(sequencer::Status::Pending, /* a_payload */ next);
                                     o_next.SetIndex(static_cast<ssize_t>(next["index"].asUInt()));
                                     o_next.SetDID(next["id"].asString());
+                                    const auto job         = GetJSONObject(o_next.payload(), "job"       , Json::ValueType::objectValue, /* a_default */ nullptr);
+                                    const auto& abort_expr = GetJSONObject(job             , "abort_expr", Json::ValueType::stringValue, /* a_default */ &Json::Value::null);
+                                    if ( false == abort_expr.isNull() ) {
+                                        o_next.SetAbortExpr(abort_expr.asString());
+                                    }
                                 }
                             }
                         }
@@ -1812,11 +1859,12 @@ const Json::Value& casper::job::Sequencer::MSG2JSON (const std::string& a_value,
 /**
  * @brief Patch an activitiy payload using V8.
  *
- * @param a_tracking Call tracking proposes.
- * @param a_activity Activity info.
+ * @param a_tracking     Call tracking proposes.
+ * @param a_activity     Activity info.
+ * @param o_abort_result Abort expression result as JSON object, Json::value::null of none.
  */
 void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracking& a_tracking,
-                                            casper::job::sequencer::Activity& a_activity)
+                                            casper::job::sequencer::Activity& a_activity, Json::Value& o_abort_result)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
         
@@ -1913,7 +1961,6 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_V8,
                                "%s", "Data object loaded");
-
     } catch (const ::cc::v8::Exception& a_v8e) {
         throw sequencer::V8ExpressionEvaluationException(a_tracking, a_v8e);
     }
@@ -1965,6 +2012,47 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
 
     // ... set patched payload as activity new payload ....
     a_activity.SetPayload(payload);
+
+    // ... check abort condition?
+    if ( 0 != a_activity.abort_expr().length() ) {
+        // ... log ...
+        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                               "Evaluating abort expression " CC_JOB_LOG_COLOR(WHITE) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                               a_activity.abort_expr().c_str()
+        );
+        
+        // ... evaluate expression ...
+        script_->Evaluate(data, a_activity.abort_expr(), value);
+        switch(value.type()) {
+            case ::cc::v8::Value::Type::Object:
+                {
+                    // ... set result ...
+                    o_abort_result = value.operator const Json::Value &();
+                    // ... NOT aborted?
+                    const ::cc::easy::JSON<::cc::Exception> json;
+                    const auto& status_code = json.Get(o_abort_result, "status_code", Json::ValueType::uintValue, nullptr);
+                    if ( 200 == status_code.asUInt() ) {
+                        // ... log ...
+                        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                                               "Abort expression result is " CC_JOB_LOG_COLOR(LIGHT_CYAN) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                               ljfw.write(o_abort_result).c_str()
+                        );
+                        // ... reset ...
+                        o_abort_result = Json::Value::null;
+                    } else {
+                        // ... log ...
+                        SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
+                                               "Abort expression result is " CC_JOB_LOG_COLOR(YELLOW) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
+                                               ljfw.write(o_abort_result).c_str()
+                        );
+                    }
+                }
+                break;
+            default:
+                throw ::cc::v8::Exception("Unsupported V8 expression evaluation result type '%s' expected '%s'!",
+                                          value.type_cstr(), "Object");
+        }
+    }
 }
 
 /**

@@ -164,7 +164,7 @@ namespace casper
             //
             const Json::Value& MSG2JSON           (const std::string& a_value, Json::Value& o_value);
             
-            void               PatchActivity      (const sequencer::Tracking& a_tracking, sequencer::Activity& a_activity);
+            void               PatchActivity      (const sequencer::Tracking& a_tracking, sequencer::Activity& a_activity, Json::Value& o_abort_result);
             
             void               PatchObject        (Json::Value& a_value, const std::function<Json::Value(const std::string& a_expression)>& a_callback);
             

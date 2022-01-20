@@ -61,6 +61,7 @@ namespace casper
                 Status             status_;      //!< JOB status.
                 uint32_t           validity_;    //!< JOB validity.
                 uint32_t           ttr_;         //!< JOB TTR.
+                std::string        abort_expr_;  //!< Optional, abort condition ( V8 expression to evaluate ).
                 
             public: // Constructor(s) / Destructor
                 
@@ -75,28 +76,29 @@ namespace casper
                 Activity& Bind    (const Status& a_status, const uint32_t& a_validity, const uint32_t& a_ttr, const Json::Value& a_payload);
                 void      Reset   (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_validity = 0, const uint32_t& a_ttr = 0);
                 
-                void SetIndex    (const size_t& a_index);
-                void SetDID      (const std::string& a_did);
-                void SetPayload  (const Json::Value& a_payload);
-                void SetStatus   (const Status& a_status);
-                void SetValidity (const uint32_t& a_validity);
-                void SetTTR      (const uint32_t& a_ttr);
+                void SetIndex     (const size_t& a_index);
+                void SetDID       (const std::string& a_did);
+                void SetPayload   (const Json::Value& a_payload);
+                void SetStatus    (const Status& a_status);
+                void SetValidity  (const uint32_t& a_validity);
+                void SetTTR       (const uint32_t& a_ttr);
+                void SetAbortExpr (const std::string& a_expr);
 
             public: // RO Method(s) / Function(s)
                 
-                const Sequence&     sequence () const;
-                const std::string&  did      () const;
-                const size_t&       index    () const;
-                const Json::Value&  payload  () const;
-                const size_t&       attempt  () const;
-                const uint64_t&     rjnr     () const;
-                const std::string&  rjid     () const;
-                const std::string&  rcnm     () const;
-                const std::string&  rcid     () const;
-                const Status&       status   () const;
-                const uint32_t&     validity () const;
-                const uint32_t&     ttr      () const;
-                
+                const Sequence&     sequence   () const;
+                const std::string&  did        () const;
+                const size_t&       index      () const;
+                const Json::Value&  payload    () const;
+                const size_t&       attempt    () const;
+                const uint64_t&     rjnr       () const;
+                const std::string&  rjid       () const;
+                const std::string&  rcnm       () const;
+                const std::string&  rcid       () const;
+                const Status&       status     () const;
+                const uint32_t&     validity   () const;
+                const uint32_t&     ttr        () const;
+                const std::string&  abort_expr () const;
             public: // Operator(s) / Overload
                 
                 Activity& operator= (const Activity& a_activity) = delete;
@@ -150,6 +152,7 @@ namespace casper
                 payload_     = a_payload;
                 ttr_         = a_ttr;
                 validity_    = a_validity;
+                abort_expr_  = "";
             }
 
             /**
@@ -211,6 +214,16 @@ namespace casper
             inline void Activity::SetTTR (const uint32_t& a_ttr)
             {
                 ttr_ = a_ttr;
+            }
+        
+            /**
+             * @brief Set abort condition ( V8 expression to evaluate ).
+             *
+             * @param a_expr V8 expression to evalualte
+             */
+            inline void Activity::SetAbortExpr (const std::string& a_expr)
+            {
+                abort_expr_ = a_expr;
             }
         
             /**
@@ -299,6 +312,14 @@ namespace casper
             inline const uint32_t& Activity::ttr() const
             {
                 return ttr_;
+            }
+        
+            /**
+             * @return RO access to activity abort expression TTR.
+             */
+            inline const std::string& Activity::abort_expr () const
+            {
+                return abort_expr_;
             }
 
         } // end of namespace 'sequencer'
