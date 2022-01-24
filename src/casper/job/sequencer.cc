@@ -51,6 +51,8 @@ const std::map<std::string, casper::job::sequencer::Status> casper::job::Sequenc
     { "cancelled", casper::job::sequencer::Status::Cancelled },
 };
 
+const ::cc::easy::job::I18N casper::job::Sequencer::sk_i18n_aborted_ = { /* key_ */ "i18n_aborted", /* args_ */ {} };
+
 /**
  * @brief Default constructor.
  *
@@ -501,7 +503,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         std::string channel_;
         uint16_t    sc_;
         std::string ew_; // exception 'what'
-        std::string abort_expr_;
+        Json::Value abort_obj_;
         Json::Value abort_result_;
         bool        subscribed_;
     } ActivityJob;
@@ -514,12 +516,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         job_defs.tube_       = GetJSONObject(job                 , "tube"    , Json::ValueType::stringValue, /* a_default */ nullptr).asString();
         job_defs.expires_in_ = GetJSONObject(job                 , "validity", Json::ValueType::intValue   , &activity_config_.validity_).asUInt();
         job_defs.ttr_        = GetJSONObject(job                 , "ttr"     , Json::ValueType::intValue   , &activity_config_.ttr_).asUInt();
-        
-        const auto& abort_expr = GetJSONObject(job, "abort_expr", Json::ValueType::stringValue, &Json::Value::null);
-        if ( false == abort_expr.isNull() ) {
-            job_defs.abort_expr_ = abort_expr.asString();
-        }
-        
+        job_defs.abort_obj_  = GetJSONObject(job                 , "abort"   , Json::ValueType::objectValue, &Json::Value::null);
     } catch (const ev::Exception& a_ev_exception) {
         throw sequencer::JSONValidationException(a_tracking, a_ev_exception.what());
     }
@@ -667,7 +664,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         a_activity.SetPayload(payload);
         a_activity.SetTTR(job_defs.ttr_);
         a_activity.SetValidity(job_defs.ttr_);
-        a_activity.SetAbortExpr(job_defs.abort_expr_);
+        a_activity.SetAbortCondition(job_defs.abort_obj_);
         // ... if required, evaluate all string fields as V8 expressions ...
         PatchActivity(a_tracking, a_activity, job_defs.abort_result_);
         // ... now register activity attempt to launch @ db ...
@@ -747,7 +744,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
     // ... aborted?
     if ( false == job_defs.abort_result_.isNull() ) {
         // ... set status code ...
-        job_defs.sc_ = static_cast<uint16_t>(job_defs.abort_result_["status_code"].asUInt());
+        job_defs.sc_ = static_cast<uint16_t>(job_defs.abort_result_.removeMember("status_code").asUInt());
         // ... log ...
         SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
                                CC_JOB_LOG_COLOR(YELLOW) "%s" CC_LOGS_LOGGER_RESET_ATTRS,
@@ -758,9 +755,24 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
         if ( true == job_defs.subscribed_ ) {
             UnsubscribeActivity(a_activity);
         }
+        //...
+        Json::Value payload = job_defs.abort_result_;
         // ... override with errors serialization ...
+        Json::Value message;
+        if ( 0 != a_activity.abort_msg().length() ) {
+            (void)SetI18NMessage(job_defs.sc_, ::cc::easy::job::I18N({
+                /* key_       */ a_activity.abort_msg(),
+                /* arguments_ */ {}
+            }), message);
+        } else {
+            (void)SetI18NMessage(job_defs.sc_, sk_i18n_aborted_, message);
+        }
+        payload["message"] = message.removeMember("message");
+        // ... set 'status' ...
+        SetStatus(a_activity.sequence().bjid(), job_defs.key_, "aborted", &job_defs.expires_in_);
+        // ... set final response ...
         Json::Value response;
-        (void)SetFailedResponse(/* a_code */ job_defs.sc_, job_defs.abort_result_, response);
+        (void)SetFailedResponse(job_defs.sc_, payload, response);
         // ... reset
         a_activity.Reset(sequencer::Status::Failed, /* a_payload */ response);
         if ( false == a_at_run ) {
@@ -1352,11 +1364,9 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
                                     o_next.Reset(sequencer::Status::Pending, /* a_payload */ next);
                                     o_next.SetIndex(static_cast<ssize_t>(next["index"].asUInt()));
                                     o_next.SetDID(next["id"].asString());
-                                    const auto job         = GetJSONObject(o_next.payload(), "job"       , Json::ValueType::objectValue, /* a_default */ nullptr);
-                                    const auto& abort_expr = GetJSONObject(job             , "abort_expr", Json::ValueType::stringValue, /* a_default */ &Json::Value::null);
-                                    if ( false == abort_expr.isNull() ) {
-                                        o_next.SetAbortExpr(abort_expr.asString());
-                                    }
+                                    o_next.SetAbortCondition(GetJSONObject(GetJSONObject(o_next.payload(), "job", Json::ValueType::objectValue, /* a_default */ nullptr),
+                                                                           "abort", Json::ValueType::objectValue, &Json::Value::null)
+                                    );
                                 }
                             }
                         }

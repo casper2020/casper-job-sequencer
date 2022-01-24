@@ -29,6 +29,9 @@
 
 #include "json/json.h"
 
+#include "cc/easy/json.h"
+
+#include "casper/job/sequencer/exception.h"
 #include "casper/job/sequencer/status.h"
 #include "casper/job/sequencer/sequence.h"
 
@@ -62,6 +65,7 @@ namespace casper
                 uint32_t           validity_;    //!< JOB validity.
                 uint32_t           ttr_;         //!< JOB TTR.
                 std::string        abort_expr_;  //!< Optional, abort condition ( V8 expression to evaluate ).
+                std::string        abort_msg_;   //!< Optional, abort message.
                 
             public: // Constructor(s) / Destructor
                 
@@ -76,13 +80,13 @@ namespace casper
                 Activity& Bind    (const Status& a_status, const uint32_t& a_validity, const uint32_t& a_ttr, const Json::Value& a_payload);
                 void      Reset   (const Status& a_status, const Json::Value& a_payload, const uint32_t& a_validity = 0, const uint32_t& a_ttr = 0);
                 
-                void SetIndex     (const size_t& a_index);
-                void SetDID       (const std::string& a_did);
-                void SetPayload   (const Json::Value& a_payload);
-                void SetStatus    (const Status& a_status);
-                void SetValidity  (const uint32_t& a_validity);
-                void SetTTR       (const uint32_t& a_ttr);
-                void SetAbortExpr (const std::string& a_expr);
+                void SetIndex          (const size_t& a_index);
+                void SetDID            (const std::string& a_did);
+                void SetPayload        (const Json::Value& a_payload);
+                void SetStatus         (const Status& a_status);
+                void SetValidity       (const uint32_t& a_validity);
+                void SetTTR            (const uint32_t& a_ttr);
+                void SetAbortCondition (const Json::Value& a_obj);
 
             public: // RO Method(s) / Function(s)
                 
@@ -99,6 +103,8 @@ namespace casper
                 const uint32_t&     validity   () const;
                 const uint32_t&     ttr        () const;
                 const std::string&  abort_expr () const;
+                const std::string&  abort_msg  () const;
+                
             public: // Operator(s) / Overload
                 
                 Activity& operator= (const Activity& a_activity) = delete;
@@ -153,6 +159,7 @@ namespace casper
                 ttr_         = a_ttr;
                 validity_    = a_validity;
                 abort_expr_  = "";
+                abort_msg_   = "";
             }
 
             /**
@@ -219,13 +226,30 @@ namespace casper
             /**
              * @brief Set abort condition ( V8 expression to evaluate ).
              *
-             * @param a_expr V8 expression to evalualte
+             * @param a_objt Object containing V8 expression to evaluate.
              */
-            inline void Activity::SetAbortExpr (const std::string& a_expr)
+            inline void Activity::SetAbortCondition (const Json::Value& a_obj)
             {
-                abort_expr_ = a_expr;
+                // ... if no abort object provided ...
+                if ( true == a_obj.isNull() ) {
+                    // ... nothing to do here ...
+                    return;
+                }
+                // ... obtain abort info ...
+                const ::cc::easy::JSON<::cc::Exception> json;
+                const auto& expr = json.Get(a_obj, "expr", Json::ValueType::stringValue, &Json::Value::null);
+                if ( false == expr.isNull() ) {
+                    abort_expr_ = expr.asString();
+                    const auto& i18n = json.Get(a_obj, "i18n", Json::ValueType::objectValue, &Json::Value::null);
+                    if ( false == i18n.isNull() ) {
+                        const auto& aborted = json.Get(i18n, "aborted", Json::ValueType::stringValue, &Json::Value::null);
+                        if ( false == aborted.isNull() ) {
+                            abort_msg_ = aborted.asString();
+                        }
+                    }
+                }
             }
-        
+                    
             /**
              * @return RO access to sequence info.
              */
@@ -315,11 +339,19 @@ namespace casper
             }
         
             /**
-             * @return RO access to activity abort expression TTR.
+             * @return RO access to activity abort expression.
              */
             inline const std::string& Activity::abort_expr () const
             {
                 return abort_expr_;
+            }
+        
+            /**
+             * @return RO access to activity abort message.
+             */
+            inline const std::string& Activity::abort_msg () const
+            {
+                return abort_msg_;
             }
 
         } // end of namespace 'sequencer'

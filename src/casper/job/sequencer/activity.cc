@@ -65,6 +65,7 @@ casper::job::sequencer::Activity::Activity (const casper::job::sequencer::Activi
     validity_    = a_activity.validity_;
     ttr_         = a_activity.ttr_;
     abort_expr_  = a_activity.abort_expr_;
+    abort_msg_   = a_activity.abort_msg_;
 }
 
 /**

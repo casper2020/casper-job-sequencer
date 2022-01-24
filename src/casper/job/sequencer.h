@@ -76,8 +76,9 @@ namespace casper
 
         public: // Static Const Data
             
-            static const char* const s_schema_;
-            static const char* const s_table_;
+            static const char* const           s_schema_;
+            static const char* const           s_table_;
+            static const ::cc::easy::job::I18N sk_i18n_aborted_;
 
         private: // Static Const Data
             
@@ -134,7 +135,7 @@ namespace casper
                                                                                             sequencer::Activity& a_next);
             
             void                                             CancelActivity                (const sequencer::Activity& a_activity, const Json::Value& a_response);
-
+            
             void                                             TrackActivity                 (const sequencer::Activity& a_activity);
             void                                             TrackActivity                 (sequencer::Activity* a_activity);
             
