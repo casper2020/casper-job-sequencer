@@ -1363,10 +1363,11 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
                                 if ( false == next["id"].isNull() ) {
                                     o_next.Reset(sequencer::Status::Pending, /* a_payload */ next);
                                     o_next.SetIndex(static_cast<ssize_t>(next["index"].asUInt()));
-                                    o_next.SetDID(next["id"].asString());
-                                    o_next.SetAbortCondition(GetJSONObject(GetJSONObject(o_next.payload(), "job", Json::ValueType::objectValue, /* a_default */ nullptr),
-                                                                           "abort", Json::ValueType::objectValue, &Json::Value::null)
-                                    );
+                                    o_next.SetDID(next["id"].asString());                                    
+                                    const auto job = GetJSONObject(o_next.payload(), "job", Json::ValueType::objectValue, /* a_default */ nullptr);
+                                    o_next.SetTTR           (GetJSONObject(job, "ttr"     , Json::ValueType::intValue   , &activity_config_.ttr_     ).asUInt());
+                                    o_next.SetValidity      (GetJSONObject(job, "validity", Json::ValueType::intValue   , &activity_config_.validity_).asUInt());
+                                    o_next.SetAbortCondition(GetJSONObject(job, "abort"   , Json::ValueType::objectValue, &Json::Value::null));
                                 }
                             }
                         }
