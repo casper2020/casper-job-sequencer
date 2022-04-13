@@ -31,11 +31,11 @@
 #include "cc/easy/json.h"
 #include "cc/i18n/singleton.h"
 
-CC_WARNING_TODO("CJS: review all comments and parameters names");
+CC_WARNING_TODO("CJS: review all comments and parameters names")
 
-CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread");
+CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread")
 
-CC_WARNING_TODO("CJS: WRITE SOME OF THE DEBUG MESSAGES TO PERMANENT LOG!!");
+CC_WARNING_TODO("CJS: WRITE SOME OF THE DEBUG MESSAGES TO PERMANENT LOG!!")
 CC_WARNING_TODO("CJS: REVIEW CC_DEBUG_LOG_TRACE / CC_DEBUG_LOG_MSG (\"job\") USAGE")
 
 #ifdef __APPLE__
