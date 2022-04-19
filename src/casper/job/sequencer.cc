@@ -96,7 +96,8 @@ void casper::job::Sequencer::Setup ()
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
     // ... prepare v8 simple expression evaluation script ...
-    script_ = new casper::job::sequencer::v8::Script(/* a_owner */ tube_, /* a_name */ config_.log_token(),
+    script_ = new casper::job::sequencer::v8::Script(loggable_data_,
+                                                     /* a_owner */ tube_, /* a_name */ config_.log_token(),
                                                      /* a_uri */ "thin air", /* a_out_path */ logs_directory()
     );
     // ... load it now ...
@@ -1986,7 +1987,7 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
     
     // ... traverse JSON and evaluate 'String' fields ...
     ::cc::v8::Value value;
-    PatchObject(payload, [this, &a_tracking, &data, &value] (const std::string& a_expression) -> Json::Value {
+    script_->PatchObject(payload, [this, &a_tracking, &data, &value] (const std::string& a_expression) -> Json::Value {
         // ... start as null ...
         value.SetNull();
         // ...
@@ -2063,42 +2064,6 @@ void casper::job::Sequencer::PatchActivity (const casper::job::sequencer::Tracki
                 throw ::cc::v8::Exception("Unsupported V8 expression evaluation result type '%s' expected '%s'!",
                                           value.type_cstr(), "Object");
         }
-    }
-}
-
-/**
- * @brief
- *
- * @param a_value
- * @param a_callback
- */
-void casper::job::Sequencer::PatchObject (Json::Value& a_object, const std::function<Json::Value(const std::string& a_expression)>& a_callback)
-{
-    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    
-    switch ( a_object.type() ) {
-        case Json::ValueType::objectValue:   // object value (collection of name/value pairs)
-            for( auto member : a_object.getMemberNames()) {
-                PatchObject(a_object[member], a_callback);
-            }
-            break;
-        case Json::ValueType::arrayValue:    // array value (ordered list)
-            for ( auto ait = a_object.begin(); ait != a_object.end(); ++ait ) {
-                PatchObject(*ait, a_callback);
-            }
-            break;
-        case Json::ValueType::stringValue:   // UTF-8 string value
-            if ( nullptr != strstr(a_object.asCString(), "$.") ) {
-                a_object = a_callback(a_object.asString());
-            }
-            break;
-        case Json::ValueType::nullValue:    // 'null' value
-        case Json::ValueType::intValue:     // signed integer value
-        case Json::ValueType::uintValue:    // unsigned integer value
-        case Json::ValueType::realValue:    // double value
-        case Json::ValueType::booleanValue: // bool value
-        default:
-            break;
     }
 }
 
