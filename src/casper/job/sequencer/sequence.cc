@@ -26,7 +26,7 @@
  *
  * @param a_source One of \link Sequence::Source \link.
  * @param a_cid    CLUSTER id.
- * @param a_bjid   BEANSTALKD job id ( for logging proposes ).
+ * @param a_bjid   BEANSTALKD job id ( for logging purposes ).
  * @param a_rsid   REDIS service id.
  * @param a_rjnr   REDIS job number.
  * @param a_rjid   REDIS job key.
@@ -46,7 +46,7 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
  *
  * @param a_source One of \link Sequence::Source \link.
  * @param a_cid    CLUSTER id.
- * @param a_bjid   BEANSTALKD job id ( for logging proposes ).
+ * @param a_bjid   BEANSTALKD job id ( for logging purposes ).
  * @param a_rsid   REDIS service id.
  * @param a_rjnr   REDIS job number.
  * @param a_rjid   REDIS job key.

@@ -476,7 +476,7 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
 /**
  * @brief Launch an activity ( a.k.a inner job ).
  *
- * @param a_tracking Call tracking proposes.
+ * @param a_tracking Call tracking purposes.
  * @param a_activity Activity info.
  * @param a_at_run   True when called from 'run' method.
  *
@@ -792,7 +792,7 @@ uint16_t casper::job::Sequencer::LaunchActivity (const casper::job::sequencer::T
 /**
  * @brief Call this method when an activity has a message to be relayed to the sequencer job.
  *
- * @param a_tracking Call tracking proposes.
+ * @param a_tracking Call tracking purposes.
  * @param a_activity Activity info.
  * @param a_message  JSON object to relay.
  *
@@ -839,7 +839,7 @@ void casper::job::Sequencer::ActivityMessageRelay (const casper::job::sequencer:
 /**
  * @brief Call this method when an activity has returned ( the next in sequence will be launched if needed ).
  *
- * @param a_tracking Call tracking proposes.
+ * @param a_tracking Call tracking purposes.
  * @param a_activity Activity info.
  * @param a_response Activity response.
  *
@@ -1688,7 +1688,7 @@ void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const s
 /**
  * @brief Execute a PostgreSQL a batch of queries and wait for it's response.
  *
- * @param a_tracking Call tracking proposes.
+ * @param a_tracking Call tracking purposes.
  * @param a_query    SQL query to execute.
  * @param a_expected Expected returned status code, one of \link ExecStatusType \link.
  * @param a_callback Callback to deliver result.
@@ -1871,7 +1871,7 @@ const Json::Value& casper::job::Sequencer::MSG2JSON (const std::string& a_value,
 /**
  * @brief Patch an activitiy payload using V8.
  *
- * @param a_tracking     Call tracking proposes.
+ * @param a_tracking     Call tracking purposes.
  * @param a_activity     Activity info.
  * @param o_abort_result Abort expression result as JSON object, Json::value::null of none.
  */

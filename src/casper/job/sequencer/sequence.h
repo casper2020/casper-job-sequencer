@@ -56,7 +56,7 @@ namespace casper
                 
                 Source      source_; //!< One of \link Source \link.
                 uint64_t    cid_ ;   //!< CLUSTER ID.
-                int64_t     bjid_;   //!< BEANSTALKD job id ( for logging proposes ).
+                int64_t     bjid_;   //!< BEANSTALKD job id ( for logging purposes ).
                 std::string rsid_;   //!< REDIS service id.
                 uint64_t    rjnr_;   //!< REDIS job number.
                 std::string rjid_;   //!< REDIS job key.
@@ -132,7 +132,7 @@ namespace casper
             }
             
             /**
-             * @return RO access to BEANSTALKD job id ( for logging proposes ).
+             * @return RO access to BEANSTALKD job id ( for logging purposes ).
              */
             inline const int64_t& Sequence::bjid () const
             {
