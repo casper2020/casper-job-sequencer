@@ -31,6 +31,8 @@
 #include "cc/easy/json.h"
 #include "cc/i18n/singleton.h"
 
+#include "version.h"
+
 CC_WARNING_TODO("CJS: review all comments and parameters names")
 
 CC_WARNING_TODO("CJS: check if v8 calls must be done on 'Main' thread")
@@ -162,73 +164,21 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     // ... first, validate sequence payload ...
     Json::UInt seq_ttr      = 0;
     Json::UInt seq_validity = 0;
-    
-    try {
+    Json::UInt seq_timeout  = 0;
         
-        const char* const seq_iomkmp = "Invalid or missing sequence ";
-
-        Json::UInt seq_ttr_sum      = 0;
-        Json::UInt seq_validity_sum = 0;
-        
-        // ... ensure mandatory fields ...
-        const auto seq_job_tube      = GetJSONObject(a_payload, "tube"     , Json::ValueType::stringValue, /* a_default */ nullptr, seq_iomkmp).asString();
-        const auto seq_job_ttr       = GetJSONObject(a_payload, "ttr"      , Json::ValueType::uintValue  , /* a_default */ 0, seq_iomkmp).asUInt();
-        const auto seq_job_validity  = GetJSONObject(a_payload, "validity" , Json::ValueType::uintValue  , /* a_default */ 0, seq_iomkmp).asUInt();
-        const auto seq_jobs          = GetJSONObject(a_payload, "jobs"     , Json::ValueType::arrayValue , /* a_default */ nullptr, seq_iomkmp);
-        for ( Json::ArrayIndex idx = 0 ; idx < seq_jobs.size() ; ++idx ) {
-            seq_ttr_sum      += GetJSONObject(seq_jobs[idx], "ttr"     , Json::ValueType::uintValue, &activity_config_.ttr_).asUInt();
-            seq_validity_sum += GetJSONObject(seq_jobs[idx], "validity", Json::ValueType::uintValue, &activity_config_.validity_).asUInt();
-        }
-        
-        // ... if sequence 'ttr' was ...
-        if ( 0 == seq_job_ttr ) {
-            // ... NOT provided, set as the sum of it's activities 'ttr' values ...
-            seq_ttr = seq_ttr_sum;
-            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_IN, "TTR not provided, setting " UINT64_FMT, static_cast<uint64_t>(seq_ttr_sum));
-        } else if ( seq_job_ttr < seq_ttr_sum ) {
-            // ... provided, BUT 'ttr' value is lower than the sum of it's activities 'ttr' values ...
-            throw sequencer::BadRequestException(tracking,
-                                                 ( "Provided sequence 'ttr' value ( " +
-                                                        std::to_string(seq_job_ttr) +
-                                                    " ) is lower that the sum of it's activities 'ttr' value ( "
-                                                        + std::to_string(seq_ttr_sum) +
-                                                  " )!"
-                                                 ).c_str()
-            );
-        }
-        // ... if sequence 'validity' was ...
-        if ( 0 == seq_job_validity ) {
-            // ... NOT provided, set as the sum of it's activities 'validity' values ...
-            seq_validity = seq_validity_sum;
-            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_IN, "Validity not provided, setting " UINT64_FMT, static_cast<uint64_t>(seq_validity));
-        } else if ( seq_job_validity < seq_validity_sum ) {
-            // ... provided, BUT 'validity' value is lower than the sum of it's activities 'validity' values ...
-            throw sequencer::BadRequestException(tracking,
-                                                 ( "Provided sequence 'validity' value ( " +
-                                                        std::to_string(seq_job_validity) +
-                                                    " ) is lower that the sum of it's activities 'validity' value ( "
-                                                        + std::to_string(seq_validity_sum) +
-                                                  " )!"
-                                                 ).c_str()
-            );
-        }
-
-    } catch (const ev::Exception& a_ev_exception) {
-        throw sequencer::JSONValidationException(tracking, a_ev_exception.what());
-    }
-    
+    ValidateSequenceTimeouts(tracking, a_sequence, a_payload, seq_ttr, seq_validity, seq_timeout);
     
     // ... now register sequence ...    
     std::stringstream ss; ss.clear(); ss.str("");
     Json::FastWriter  jw; jw.omitEndingLineFeed();
     
-    // ... js.register_sequence (pid INTEGER, cid INTEGER, bjid INTEGER, rjid TEXT, rcid TEXT, payload JSONB, activities JSONB, ttr INTEGER, validity INTEGER) ...
+    // ... js.register_sequence (pid INTEGER, cid INTEGER, iid INTEGER, bjid INTEGER, rjid TEXT, rcid TEXT, payload JSONB, activities JSONB, ttr INTEGER, validity INTEGER, timeout INTEGER) ...
     ss << "SELECT * FROM js.register_sequence(";
-    ss <<     config_.pid() << ',' << a_sequence.cid() << ',' << a_sequence.bjid();
+    ss <<     config_.pid() << ',' << a_sequence.cid() << ',' << a_sequence.iid() << ',' << a_sequence.bjid();
     ss <<     ',' <<  "'" << a_sequence.rjid() << "'" << ',' << "'" << a_sequence.rcid() << "'";
     ss <<     ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_payload)) << "'";
     ss <<     ",'" << ::ev::postgresql::Request::SQLEscape(jw.write(a_payload["jobs"])) << "'";
-    ss <<     ',' << seq_ttr << ',' << seq_validity;
+    ss <<     ',' << seq_ttr << ',' << seq_validity << ',' << seq_timeout;
     ss << ");";
     
     //
@@ -1463,6 +1413,16 @@ void casper::job::Sequencer::TrackActivity (const casper::job::sequencer::Activi
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_STEP,
                            "%s", "Track"
     );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_TTR,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>(a_activity.ttr())
+    );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_VALIDITY,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>(a_activity.validity())
+    );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, a_activity, CC_JOB_LOG_STEP_TIMEOUT,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>(a_activity.timeout())
+    );
+
         
     // ... keep track of running activity ...
     running_activities_[a_activity.rcid()] = new casper::job::sequencer::Activity(a_activity);
@@ -1470,7 +1430,7 @@ void casper::job::Sequencer::TrackActivity (const casper::job::sequencer::Activi
     // ... schedule a timeout event for this activity ...
     ScheduleCallbackOnLooperThread(/* a_id */ a_activity.rcid(),
                                    /* a_callback */ std::bind(&casper::job::Sequencer::OnActivityTimeout, this, std::placeholders::_1),
-                                   /* a_deferred  */ ( a_activity.ttr() * 1000 ) + 100 , // ttr + 100 milliseconds of threshold
+                                   /* a_deferred  */ ( a_activity.timeout() * 1000 ) + 100 , // ttr + 100 milliseconds of threshold
                                    /* a_recurrent */ false
    );
     
@@ -1491,6 +1451,15 @@ void casper::job::Sequencer::TrackActivity (casper::job::sequencer::Activity* a_
     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, (*a_activity), CC_JOB_LOG_STEP_STEP,
                            "%s", "Track"
     );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, (*a_activity), CC_JOB_LOG_STEP_TTR,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>((*a_activity).ttr())
+    );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, (*a_activity), CC_JOB_LOG_STEP_VALIDITY,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>((*a_activity).validity())
+    );
+    SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_DBG, (*a_activity), CC_JOB_LOG_STEP_TIMEOUT,
+                           UINT64_FMT "second(s)", static_cast<uint64_t>((*a_activity).timeout())
+    );
 
     // ... keep track of running activity ...
     running_activities_[a_activity->rcid()] = a_activity;
@@ -1498,7 +1467,7 @@ void casper::job::Sequencer::TrackActivity (casper::job::sequencer::Activity* a_
     // ... schedule a timeout event for this activity ...
     ScheduleCallbackOnLooperThread(/* a_id */ a_activity->rcid(),
                                    /* a_callback */ std::bind(&casper::job::Sequencer::OnActivityTimeout, this, std::placeholders::_1),
-                                   /* a_deferred  */ ( a_activity->ttr() * 1000 ) + 100 , // ttr + 100 milliseconds of threshold
+                                   /* a_deferred  */ ( a_activity->timeout() * 1000 ) + 100 , // ttr + 100 milliseconds of threshold
                                    /* a_recurrent */ false
     );
     
@@ -2098,3 +2067,256 @@ void casper::job::Sequencer::Sleep (const casper::job::sequencer::Config& a_conf
 
 #endif
 
+/**
+ * @brief Call to dump some sequence info to log.
+ *
+ * @param a_tracking Call tracking purposes.
+ * @param a_sequence Sequence info.
+ * @param a_payload  Sequence payload.
+ * @param o_ttr      Calculated sequence TTR.
+ * @param o_validity Calculated sequence validity.
+ * @param o_timeout  Calculated sequence timeout.
+*/
+void casper::job::Sequencer::ValidateSequenceTimeouts (const sequencer::Tracking& a_tracking, const sequencer::Sequence& a_sequence, const Json::Value& a_payload,
+                                                       Json::UInt& o_ttr, Json::UInt& o_validity, Json::UInt& o_timeout)
+{
+    const char* const seq_iomkmp = "Invalid or missing sequence ";
+
+    Json::UInt seq_acts_ttr_sum      = 0;
+    Json::UInt seq_acts_validity_sum = 0;
+
+    // ... ensure mandatory fields ...
+    const auto seq_ttr       = GetJSONObject(a_payload, "ttr"      , Json::ValueType::uintValue  , /* a_default */ 0, seq_iomkmp).asUInt();
+    const auto seq_validity  = GetJSONObject(a_payload, "validity" , Json::ValueType::uintValue  , /* a_default */ 0, seq_iomkmp).asUInt();
+    const auto seq_acts      = GetJSONObject(a_payload, "jobs"     , Json::ValueType::arrayValue , /* a_default */ nullptr, seq_iomkmp);
+    for ( Json::ArrayIndex idx = 0 ; idx < seq_acts.size() ; ++idx ) {
+        seq_acts_ttr_sum      += GetJSONObject(seq_acts[idx], "ttr"     , Json::ValueType::uintValue, &activity_config_.ttr_).asUInt();
+        seq_acts_validity_sum += GetJSONObject(seq_acts[idx], "validity", Json::ValueType::uintValue, &activity_config_.validity_).asUInt();
+    }
+    
+    const Json::UInt seq_acts_timeout_sum = ( seq_acts_ttr_sum + seq_acts_validity_sum );
+    const Json::UInt seq_job_timeout_sum  = ( seq_ttr + seq_validity );
+
+    o_ttr      = seq_acts_ttr_sum;
+    o_validity = seq_acts_validity_sum;
+    o_timeout  = seq_acts_timeout_sum;
+    
+    // ... if sequence 'ttr' was ...
+    if ( 0 == seq_ttr ) {
+        // ... NOT provided, set as the sum of it's activities 'ttr' values ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_IN, "TTR not provided, setting " UINT64_FMT, static_cast<uint64_t>(o_ttr));
+    } else if ( seq_ttr < seq_acts_ttr_sum ) {
+        // ... provided, BUT 'ttr' value is lower than the sum of it's activities 'ttr' values ...
+        throw sequencer::BadRequestException(a_tracking,
+                                             ( "Provided sequence 'ttr' value ( " +
+                                                    std::to_string(seq_ttr) +
+                                                " ) is lower that the sum of it's activities 'ttr' value ( "
+                                                    + std::to_string(seq_acts_ttr_sum) +
+                                              " )!"
+                                             ).c_str()
+        );
+    }
+    // ... if sequence 'validity' was ...
+    if ( 0 == seq_validity ) {
+        // ... NOT provided, set as the sum of it's activities 'validity' values ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_IN, "Validity not provided, setting " UINT64_FMT, static_cast<uint64_t>(o_validity));
+    } else if ( seq_validity < seq_acts_validity_sum ) {
+        // ... provided, BUT 'validity' value is lower than the sum of it's activities 'validity' values ...
+        throw sequencer::BadRequestException(a_tracking,
+                                             ( "Provided sequence 'validity' value ( " +
+                                                    std::to_string(seq_validity) +
+                                                " ) is lower that the sum of it's activities 'validity' value ( "
+                                                    + std::to_string(seq_acts_validity_sum) +
+                                              " )!"
+                                             ).c_str()
+        );
+    }
+    
+    // ... log ...
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_sequence, CC_JOB_LOG_STEP_TTR     , UINT64_FMT " second(s)", static_cast<uint64_t>(seq_acts_ttr_sum));
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_sequence, CC_JOB_LOG_STEP_VALIDITY, UINT64_FMT " second(s)", static_cast<uint64_t>(seq_acts_validity_sum));
+    SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, a_sequence, CC_JOB_LOG_STEP_TIMEOUT , UINT64_FMT " second(s)", static_cast<uint64_t>(seq_acts_timeout_sum));
+
+    // ... enforce or issue warnings related to timeout limits ...
+    if ( false == sequence_config_.timeouts_.isObject() || false == sequence_config_.timeouts_.isMember("limits")  ) {
+        // ... no limits to test ...
+        return;
+    }
+    
+    // ... WARN or ENFORCE TIMEOUTS ...
+    const auto limits_obj  = GetJSONObject(sequence_config_.timeouts_, "limits", Json::ValueType::objectValue   , /* a_default */ nullptr);
+    const auto reject_obj  = GetJSONObject(limits_obj , "reject" , Json::ValueType::objectValue , /* a_default */ nullptr);
+    const auto reject_val  = ( false == reject_obj.isNull() ? GetJSONObject(reject_obj , "above"  , Json::ValueType::uintValue   , /* a_default */ nullptr).asUInt64() : 0 );
+    const auto enforce_ref = GetJSONObject(reject_obj , "enforce", Json::ValueType::booleanValue, /* a_default */ &Json::Value::null);
+    const auto enforce_val = ( false == reject_obj.isNull() && false == enforce_ref.isNull() ? enforce_ref.asBool() : true );
+    // ... out of bounds?
+    if ( reject_val > 0 && o_timeout > reject_val ) {
+        // ... enforce?
+        if ( true == enforce_val ) {
+            // ... log ...
+            LogSequenceAlert(a_sequence, seq_acts, CC_JOB_LOG_LEVEL_CRT, CC_JOB_LOG_STEP_ALERT, reject_obj, o_timeout);
+            // ... BAD request!
+            throw sequencer::BadRequestException(a_tracking,
+                                                 ( "Sequence 'timeout' value, " +
+                                                        std::to_string(o_timeout) +
+                                                    " second(s), is higher that max allowed value of "
+                                                        + std::to_string(reject_val) +
+                                                  " second(s)!"
+                                                 ).c_str()
+            );
+        } else {
+            // ... no, issue an warning ...
+            LogSequenceAlert(a_sequence, seq_acts, CC_JOB_LOG_LEVEL_WRN, CC_JOB_LOG_STEP_ALERT, reject_obj, o_timeout);
+        }
+    }
+}
+
+/**
+ * @brief Call to log some sequence info.
+ *
+ * @param a_sequence    Sequence info.
+ * @param a_acts        Sequence 'jobs' payload.
+ * @param a_level       LOG level.
+ * @param a_step        LOG step.
+ * @param a_definitions Warning definitions, JSON object.
+*/
+void casper::job::Sequencer::LogSequenceAlert (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
+                                               const size_t a_level, const char* const a_step, const Json::Value& a_definitions,
+                                               const Json::UInt a_timeout)
+{
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    
+    // ...
+    Json::Value object = Json::Value(Json::ValueType::objectValue);
+    object["process"]  = Json::Value(Json::ValueType::objectValue);
+    object["process"]["name"]    = CASPER_JOB_SEQUENCER_NAME;
+    object["process"]["version"] = CASPER_JOB_SEQUENCER_VERSION;
+    object["process"]["pid"]     = config_.pid();
+    object["origin"]   = a_sequence.origin();
+    object["cluster"]  = a_sequence.cid();
+    object["instance"] = a_sequence.iid();
+    object["tube"]     = tube_;
+    object["job"]      = a_sequence.rjid();
+    object["jobs"]     = Json::Value(Json::ValueType::arrayValue);
+    // ... collect minimalist info ...
+    for ( Json::ArrayIndex idx = 0 ; idx < a_acts.size() ; ++idx ) {
+        const auto ttr      = GetJSONObject(a_acts[idx], "ttr"     , Json::ValueType::uintValue, &activity_config_.ttr_).asUInt();
+        const auto validity = GetJSONObject(a_acts[idx], "validity", Json::ValueType::uintValue, &activity_config_.validity_).asUInt();
+        const auto tube     = GetJSONObject(a_acts[idx], "tube"    , Json::ValueType::stringValue, nullptr).asString();
+        Json::Value& obj = object["jobs"].append(Json::Value(Json::ValueType::objectValue));
+        obj["tube"]     = tube;
+        obj["ttr"]      = ttr;
+        obj["validity"] = validity;
+        obj["timeout"]  = ttr + validity;
+    }
+    switch(a_level) {
+        case CC_JOB_LOG_LEVEL_CRT: // CRITICAL
+            object["severity"] = "CRITICAL";
+            break;
+        case CC_JOB_LOG_LEVEL_ERR: // ERROR
+            object["severity"] = "ERROR";
+            break;
+        case CC_JOB_LOG_LEVEL_WRN: // WARNING
+            object["severity"] = "WARNING";
+            break;
+        case CC_JOB_LOG_LEVEL_INF: // INFO
+            object["severity"] = "INFO";
+            break;
+        case CC_JOB_LOG_LEVEL_VBS: // VERBOSE
+            object["severity"] = "VERBOSE";
+            break;
+        case CC_JOB_LOG_LEVEL_DBG: // DEBUG
+            object["severity"] = "DEBUG";
+            break;
+        case CC_JOB_LOG_LEVEL_PRN: // PARANOID
+            object["severity"] = "PARANOID";
+            break;
+        default:
+            object["severity"] = "UNKNOWN";
+            break;
+    }
+    object["messages"] = GetJSONObject(sequence_config_.timeouts_, "messages", Json::ValueType::objectValue, /* a_default */ nullptr);
+    object["timeout"]  = a_definitions;
+    if ( false == object["timeout"].isMember("enforce") ) {
+        object["timeout"]["enforce"] = ( a_level <= CC_JOB_LOG_LEVEL_ERR );
+    }
+    object["timeout"]["value"] = a_timeout;
+    
+    Json::FastWriter fw; fw.omitEndingLineFeed();
+    ::v8::Persistent<::v8::Value> data;
+    ::cc::v8::Value               value;
+    // ... V8 it, expression from config !
+    script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
+                     /* a_data   */ fw.write(object).c_str(),
+                     /* o_object */ nullptr,
+                     /* o_value  */ &data,
+                     /* a_key    */ nullptr
+    );
+    // ...
+    const auto translate = [] (const ::cc::v8::Value& a_value, Json::Value& o_value) {
+        switch(a_value.type()) {
+            case ::cc::v8::Value::Type::Int32:
+                o_value = Json::Value(a_value.operator int());
+                break;
+            case ::cc::v8::Value::Type::UInt32:
+                o_value = Json::Value(a_value.operator unsigned int());
+                break;
+            case ::cc::v8::Value::Type::Double:
+                o_value = Json::Value(a_value.operator double());
+                break;
+            case ::cc::v8::Value::Type::String:
+                o_value = Json::Value(a_value.AsString());
+                break;
+            case ::cc::v8::Value::Type::Boolean:
+                o_value = Json::Value(a_value.operator const bool());
+                break;
+            case ::cc::v8::Value::Type::Object:
+                o_value = a_value.operator const Json::Value &();
+            case ::cc::v8::Value::Type::Undefined:
+            case ::cc::v8::Value::Type::Null:
+                o_value = Json::Value(Json::Value::null);
+                break;
+        }
+    };
+    // ...
+    if ( true == sequence_config_.timeouts_.isMember("suspect") ) {
+        object["suspect"] = GetJSONObject(sequence_config_.timeouts_, "suspect"  , Json::ValueType::stringValue , /* a_default */ &Json::Value::null);
+        script_->Evaluate(data, object["suspect"].asString(), value);
+        translate(value, object["suspect"]);
+        // ... V8 it, expression from config !
+        script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
+                         /* a_data   */ fw.write(object).c_str(),
+                         /* o_object */ nullptr,
+                         /* o_value  */ &data,
+                         /* a_key    */ nullptr
+        );
+    }
+    // ... V8 it, expression from config !
+    script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
+                     /* a_data   */ fw.write(object).c_str(),
+                     /* o_object */ nullptr,
+                     /* o_value  */ &data,
+                     /* a_key    */ nullptr
+    );
+    // ...
+    for ( auto member : object["messages"].getMemberNames() ) {
+        script_->Evaluate(data, object["messages"][member].asString(), value);
+        translate(value, object["messages"][member]);
+    }
+    // ... V8 it, expression from config !
+    script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
+                     /* a_data   */ fw.write(object).c_str(),
+                     /* o_object */ nullptr,
+                     /* o_value  */ &data,
+                     /* a_key    */ nullptr
+    );
+    script_->Evaluate(data, a_definitions["message"].asString(), value);
+    translate(value, object["message"]);
+    // ... filter ...
+    std::string msg = fw.write(object["message"]);
+    msg.erase(0,1);
+    msg.erase(msg.length() - 1);
+    msg.erase(std::remove(msg.begin(), msg.end(), '\\'), msg.end());
+    // ... log ...
+    SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, "'%s'", msg.c_str());
+}

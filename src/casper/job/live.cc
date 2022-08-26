@@ -111,12 +111,29 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         // NGINX-BROKER 'jobify' module awareness
         //
         const Json::Value* payload;
+        Json::Value        origin = Json::Value(Json::ValueType::objectValue);
         if ( true == a_payload.isMember("body") && true == a_payload.isMember("headers") ) {
             // ... from nginx-broker 'jobify' module ...
             payload = &a_payload["body"];
+            if ( true == a_payload["headers"].isArray() ) {
+                for ( Json::ArrayIndex idx = 0 ; idx < a_payload["headers"].size() ; ++idx ) {
+                    const auto& value = a_payload["headers"][idx];
+                    if ( true == value.isString() && 0 == strncasecmp(value.asCString(), "User-Agent: ", 12 * sizeof(char) ) ) {
+                        origin["user-agent"] = std::string(value.asCString() + ( 12 * sizeof(char) ));
+                        break;
+                    }
+                }
+                if ( true == a_payload.isMember("__nginx_broker__") ) {
+                    origin["via"] = a_payload["__nginx_broker__"];
+                }
+            }
         } else {
             // ... direct from beanstalkd queue ...
             payload = &a_payload;
+        }
+        // ... no origin?
+        if ( 0 == origin.getMemberNames().size() ) {
+            origin = Json::Value::null;
         }
         
         // ... register sequence and grab first activity ...
@@ -134,12 +151,14 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
                                                                 ? sequencer::Sequence::Source::Jobification
                                                                 : sequencer::Sequence::Source::Default
                                                               ),
-                                               /* a_cid */  config_.instance(),
-                                               /* a_bjid */ tracking.bjid_,
-                                               /* a_rsid */ config_.service_id(),
-                                               /* a_rjnr */ rjnr,
-                                               /* a_rjid */ ( config_.service_id() + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
-                                               /* a_rcid */ ( config_.service_id() + ':'      + tube_ + ':' + a_payload["id"].asString() )
+                                               /* a_cid    */  config_.cluster(),
+                                               /* a_iid    */  config_.instance(),
+                                               /* a_bjid   */ tracking.bjid_,
+                                               /* a_rsid   */ config_.service_id(),
+                                               /* a_rjnr   */ rjnr,
+                                               /* a_rjid   */ ( config_.service_id() + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
+                                               /* a_rcid   */ ( config_.service_id() + ':'      + tube_ + ':' + a_payload["id"].asString() ),
+                                               /* a_origin */ origin
             );
             // ... register sequence ...
             auto first_activity = RegisterSequence(*sequence, *payload);
@@ -169,12 +188,18 @@ void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
         }
         
     } catch (const sequencer::JumpErrorAlreadySet& a_exception) {
-        
-        // ... log error ...
-        // TODO SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_ERR, a_sequence, CC_JOB_LOG_STEP_IN, "%s", a_ev_exception.what());
 
         // ... set response code ...
-        o_response.code_ = a_exception.code_;
+        if ( true == o_response.payload_.isNull() ) {
+            o_response.code_ = SetError(a_exception.code_, /* a_i18n */ nullptr,
+                                        /* a_error */ ::cc::easy::job::InternalError{
+                                            /* code_ */ nullptr,
+                                            /* why_ */ a_exception.what()
+                                        }, o_response.payload_
+            );
+        } else {
+            o_response.code_ = a_exception.code_;
+        }
 
         Json::FastWriter fjw; fjw.omitEndingLineFeed();
         

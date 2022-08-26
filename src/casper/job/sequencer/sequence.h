@@ -56,6 +56,7 @@ namespace casper
                 
                 Source      source_; //!< One of \link Source \link.
                 uint64_t    cid_ ;   //!< CLUSTER ID.
+                uint64_t    iid_ ;   //!< INSTANCE ID.
                 int64_t     bjid_;   //!< BEANSTALKD job id ( for logging purposes ).
                 std::string rsid_;   //!< REDIS service id.
                 uint64_t    rjnr_;   //!< REDIS job number.
@@ -63,14 +64,17 @@ namespace casper
                 std::string rcid_;   //!< REDIS job channel.
                 std::string did_ ;   //!< DB id ( form table js.sequences[id] as string ).
                 size_t      count_;  //!< NUMBER of activites related to this sequence.
+                Json::Value origin_; //!< Origin info, if available.
 
             public: // Constructor(s) / Destructor
 
                 Sequence () = delete;
-                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid,
-                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid);
-                Sequence (const Source& a_source, const uint64_t& a_cid, const int64_t& a_bjid,
-                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did);
+                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid,
+                          const Json::Value& a_origin);
+                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                          const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did,
+                          const Json::Value& a_origin);
                 Sequence (const Sequence& a_sequence);
                 virtual ~Sequence();
                 
@@ -82,6 +86,7 @@ namespace casper
                 
                 const Source&      source () const;
                 const uint64_t&    cid    () const;
+                const uint64_t&    iid    () const;
                 const int64_t&     bjid   () const;
                 const std::string& rsid   () const;
                 const uint64_t&    rjnr   () const;
@@ -89,6 +94,7 @@ namespace casper
                 const std::string& rcid   () const;
                 const std::string& did    () const;
                 const size_t&      count  () const;
+                const Json::Value& origin () const;
                 
                 void               Bind    (const std::string& a_id, const size_t& a_count);
 
@@ -105,6 +111,7 @@ namespace casper
             {
                 source_ = a_sequence.source_;
                 cid_    = a_sequence.cid_;
+                iid_    = a_sequence.iid_;
                 bjid_   = a_sequence.bjid_;
                 rsid_   = a_sequence.rsid_;
                 rjnr_   = a_sequence.rjnr_;
@@ -112,11 +119,12 @@ namespace casper
                 rcid_   = a_sequence.rcid_;
                 did_    = a_sequence.did_;
                 count_  = a_sequence.count_;
+                origin_ = a_sequence.origin_;
                 return *this;
             }
         
             /**
-             * @return RO access to source.
+             * @return R/O access to source.
              */
             inline const Sequence::Source& Sequence::source () const
             {
@@ -124,7 +132,7 @@ namespace casper
             }
                 
             /**
-             * @return RO access to CLUSTER ID.
+             * @return R/O access to CLUSTER ID.
              */
             inline const uint64_t& Sequence::cid () const
             {
@@ -132,7 +140,15 @@ namespace casper
             }
             
             /**
-             * @return RO access to BEANSTALKD job id ( for logging purposes ).
+             * @return R/O access to CLUSTER ID.
+             */
+            inline const uint64_t& Sequence::iid () const
+            {
+                return iid_;
+            }
+            
+            /**
+             * @return R/O access to BEANSTALKD job id ( for logging purposes ).
              */
             inline const int64_t& Sequence::bjid () const
             {
@@ -140,7 +156,7 @@ namespace casper
             }
         
             /**
-             * @return RO access to REDIS service ID.
+             * @return R/O access to REDIS service ID.
              */
             inline const std::string& Sequence::rsid () const
             {
@@ -148,7 +164,7 @@ namespace casper
             }
         
             /**
-             * @return RO access to REDIS job number.
+             * @return R/O access to REDIS job number.
              */
             inline const uint64_t& Sequence::rjnr () const
             {
@@ -156,7 +172,7 @@ namespace casper
             }
             
             /**
-             * @return RO access to REDIS job key.
+             * @return R/O access to REDIS job key.
              */
             inline const std::string& Sequence::rjid () const
             {
@@ -164,7 +180,7 @@ namespace casper
             }
             
             /**
-             * @return RO access to REDIS job channel.
+             * @return R/O access to REDIS job channel.
              */
             inline const std::string& Sequence::rcid () const
             {
@@ -172,7 +188,7 @@ namespace casper
             }
             
             /**
-             * @return RO access to DB id ( form table js.sequences[id] as string ).
+             * @return R/O access to DB id ( form table js.sequences[id] as string ).
              */
             inline const std::string& Sequence::did  () const
             {
@@ -185,6 +201,14 @@ namespace casper
             inline const size_t& Sequence::count () const
             {
                 return count_;
+            }
+            
+            /**
+             * @return R/O access to 'Origin' info, optional.
+             */
+            inline const Json::Value& Sequence::origin() const
+            {
+                return origin_;
             }
         
             /**

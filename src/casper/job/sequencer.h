@@ -52,25 +52,25 @@ namespace casper
 
 #define SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, a_format, ...) \
     CC_JOB_LOG(a_level, a_sequence.bjid(), \
-                CC_JOB_LOG_COLOR(LIGHT_BLUE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                CC_JOB_LOG_COLOR(LIGHT_BLUE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-8.8s, " a_format, \
                 SEQUENCER_LOG_KEY_SEQUENCE , a_step, __VA_ARGS__ \
     );
 
 #define SEQUENCER_LOG_ACTIVITY(a_level, a_activity, a_step, a_format, ...) \
     CC_JOB_LOG(a_level, a_activity.sequence().bjid(), \
-               CC_JOB_LOG_COLOR(WHITE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, { " SIZET_FMT "/" SIZET_FMT " } " a_format, \
+               CC_JOB_LOG_COLOR(WHITE) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-8.8s, { " SIZET_FMT "/" SIZET_FMT " } " a_format, \
                SEQUENCER_LOG_KEY_ACTIVITY, a_step, ( a_activity.index() + 1 ), a_activity.sequence().count(), __VA_ARGS__ \
     );
 
 #define SEQUENCER_LOG_JOB(a_level, a_bjid, a_step, a_format, ...) \
     CC_JOB_LOG(a_level, a_bjid, \
-                CC_JOB_LOG_COLOR(MAGENTA) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                CC_JOB_LOG_COLOR(MAGENTA) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-8.8s, " a_format, \
                 SEQUENCER_LOG_KEY_JOB, a_step, __VA_ARGS__ \
     );
 
 #define SEQUENCER_LOG_CRITICAL_EXCEPTION(a_format, ...) \
     CC_JOB_LOG(CC_JOB_LOG_LEVEL_CRT, uint64_t(0), \
-                CC_JOB_LOG_COLOR(LIGHT_RED) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-7.7s, " a_format, \
+                CC_JOB_LOG_COLOR(LIGHT_RED) "%-8.8s" CC_LOGS_LOGGER_RESET_ATTRS ": %-8.8s, " a_format, \
                 SEQUENCER_LOG_KEY_SEQUENCE, CC_JOB_LOG_STEP_ERROR, __VA_ARGS__ \
     );
 
@@ -173,7 +173,16 @@ namespace casper
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
             void               Sleep (const sequencer::Config& a_config, const sequencer::Activity& a_activity, const char* const a_msg);
 #endif
-            
+
+            //
+            // LOG HELPER(S)
+            //
+            void ValidateSequenceTimeouts (const sequencer::Tracking& a_tracking, const sequencer::Sequence& a_sequence, const Json::Value& a_payload,
+                                           Json::UInt& o_ttr, Json::UInt& o_validity, Json::UInt& o_timeout);
+            void LogSequenceAlert         (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
+                                           const size_t a_level, const char* const a_step, const Json::Value& a_definitions,
+                                           const Json::UInt a_timeout);
+
         protected: // Inline Method(s) // Function(s)
             
             void        LogStats () const;

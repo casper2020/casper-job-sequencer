@@ -102,6 +102,7 @@ namespace casper
                 const Status&       status     () const;
                 const uint32_t&     validity   () const;
                 const uint32_t&     ttr        () const;
+                uint64_t            timeout    () const;
                 const std::string&  abort_expr () const;
                 const std::string&  abort_msg  () const;
                 
@@ -330,12 +331,29 @@ namespace casper
                 return status_;
             }
             
+            
+            /**
+             * @return RO access to activity job validity.
+             */
+            inline const uint32_t& Activity::validity() const
+            {
+                return validity_;
+            }
+            
             /**
              * @return RO access to activity job TTR.
              */
             inline const uint32_t& Activity::ttr() const
             {
                 return ttr_;
+            }
+            
+            /**
+             * @return RO access to activity job timeout.
+             */
+            inline uint64_t Activity::timeout() const
+            {
+                return static_cast<uint64_t>(ttr_) + static_cast<uint64_t>(validity_);
             }
         
             /**

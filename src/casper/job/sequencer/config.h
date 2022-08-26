@@ -43,6 +43,7 @@ namespace casper
                     
                     const Json::Value validity_;
                     const Json::Value ttr_;
+                    const Json::Value timeouts_;
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
                     const Json::Value sleep_;
 #endif
@@ -58,7 +59,7 @@ namespace casper
                      */
                     Config (const Json::Value& a_config)
                         : validity_(a_config.get("validity", static_cast<Json::UInt64>(3600)).asUInt()),
-                          ttr_(a_config.get("ttr", static_cast<Json::UInt64>(300)).asUInt())
+                          ttr_(a_config.get("ttr", static_cast<Json::UInt64>(300)).asUInt()), timeouts_(a_config.get("timeouts", Json::Value::null))
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
                           , sleep_(a_config.get("sleep", static_cast<Json::UInt64>(0)).asUInt())
 #endif
