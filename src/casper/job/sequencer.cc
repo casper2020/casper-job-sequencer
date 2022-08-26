@@ -161,12 +161,16 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     
     CC_WARNING_TODO("CJS: ensure id is the last component of a_jrid");
     
-    // ... first, validate sequence payload ...
     Json::UInt seq_ttr      = 0;
     Json::UInt seq_validity = 0;
     Json::UInt seq_timeout  = 0;
-        
+    // ... validate ...
     ValidateSequenceTimeouts(tracking, a_sequence, a_payload, seq_ttr, seq_validity, seq_timeout);
+    
+    // ... adjust ...
+    const uint64_t adjust_seq_ttr = static_cast<uint64_t>(seq_ttr)      + ( 5 * a_payload["jobs"].size() );
+    const uint64_t adjust_seq_val = static_cast<uint64_t>(seq_validity) + ( 5 * a_payload["jobs"].size() );
+    SetTTRAndValidity(adjust_seq_ttr, adjust_seq_val);
     
     // ... now register sequence ...    
     std::stringstream ss; ss.clear(); ss.str("");
