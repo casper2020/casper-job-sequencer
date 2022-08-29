@@ -168,8 +168,8 @@ casper::job::sequencer::Activity casper::job::Sequencer::RegisterSequence (seque
     ValidateSequenceTimeouts(tracking, a_sequence, a_payload, seq_ttr, seq_validity, seq_timeout);
     
     // ... adjust ...
-    const uint64_t adjust_seq_ttr = static_cast<uint64_t>(seq_ttr)      + ( 5 * a_payload["jobs"].size() );
-    const uint64_t adjust_seq_val = static_cast<uint64_t>(seq_validity) + ( 5 * a_payload["jobs"].size() );
+    const uint64_t adjust_seq_ttr = static_cast<uint64_t>(seq_ttr);
+    const uint64_t adjust_seq_val = static_cast<uint64_t>(seq_validity);
     SetTTRAndValidity(adjust_seq_ttr, adjust_seq_val);
     
     // ... now register sequence ...    
