@@ -944,7 +944,7 @@ void casper::job::Sequencer::SubscribeActivity (const casper::job::sequencer::Ac
     ExecuteOnMainThread([this, &a_activity, &cv] () {
         
         ::ev::redis::subscriptions::Manager::GetInstance().SubscribeChannels({ a_activity.rcid()},
-            [this, &a_activity, &cv](const std::string& a_id, const ::ev::redis::subscriptions::Manager::Status& a_status) -> EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK {
+            [this, &a_activity, &cv](const std::string& /* a_id */, const ::ev::redis::subscriptions::Manager::Status& a_status) -> EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK {
                 // ... subscribed?
                 if ( ::ev::redis::subscriptions::Manager::Status::Subscribed == a_status ) {
                     // ... log ...
@@ -1150,7 +1150,7 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
     ExecuteOnMainThread([this, &a_activity, &cv] () {
         
         ::ev::redis::subscriptions::Manager::GetInstance().UnsubscribeChannels({ a_activity.rcid() },
-            [this,  &a_activity, &cv](const std::string& a_id, const ::ev::redis::subscriptions::Manager::Status& a_status) -> EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK {
+            [this,  &a_activity, &cv](const std::string& /* a_id */, const ::ev::redis::subscriptions::Manager::Status& a_status) -> EV_REDIS_SUBSCRIPTIONS_DATA_POST_NOTIFY_CALLBACK {
                 if ( ::ev::redis::subscriptions::Manager::Status::Unsubscribed == a_status ) {
                     // ... log ...
                     SEQUENCER_LOG_ACTIVITY(CC_JOB_LOG_LEVEL_INF, a_activity, CC_JOB_LOG_STEP_REDIS,

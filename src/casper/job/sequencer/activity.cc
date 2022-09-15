@@ -35,7 +35,7 @@ casper::job::sequencer::Activity::Activity (const Sequence& a_sequence, const st
     did_      = a_did;
     index_    = a_index;
     payload_  = Json::Value::null;
-    attempt_  = 0;
+    attempt_  = a_attempt;
     rjnr_     = 0;
     rjid_     = "";
     rcnm_     = "";
