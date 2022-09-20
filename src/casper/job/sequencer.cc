@@ -1198,6 +1198,8 @@ void casper::job::Sequencer::UnsubscribeActivity (const casper::job::sequencer::
         const std::string dst_job_key     = a_activity.sequence().rjid();
         Json::Value       status          = Json::Value(Json::ValueType::objectValue);
         status["status"]                  = "reset";
+        status["activity"]["number"]      = static_cast<Json::UInt64>(a_activity.index() + 1);
+        status["activity"]["count"]       = static_cast<Json::UInt64>(a_activity.sequence().count());
 #if defined(__APPLE__) && !defined(NDEBUG) && ( defined(DEBUG) || defined(_DEBUG) || defined(ENABLE_DEBUG) )
         status["debug"]["activity"]["rcid"]   = a_activity.rcid();
         status["debug"]["activity"]["number"] = static_cast<Json::UInt64>(a_activity.index() + 1);
