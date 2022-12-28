@@ -27,7 +27,13 @@
 #include "unicode/datefmt.h"  // U_ICU_NAMESPACE::DateFormat
 #include "unicode/smpdtfmt.h" // U_ICU_NAMESPACE::SimpleDateFormat
 #include "unicode/dtfmtsym.h" // U_ICU_NAMESPACE::DateFormatSymbols
+
+CC_DIAGNOSTIC_PUSH()
+CC_DIAGNOSTIC_IGNORED("-Wshadow-field")
+
 #include "unicode/schriter.h" // U_ICU_NAMESPACE::StringCharacterIterator
+
+CC_DIAGNOSTIC_POP()
 
 /**
  * @brief Default constructor.

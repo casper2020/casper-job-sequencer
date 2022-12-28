@@ -38,7 +38,7 @@ namespace casper
             // TRACKING
             //
             typedef struct {
-                const int64_t     bjid_;
+                const uint64_t    bjid_;
                 const std::string action_;
                 const std::string file_;
                 const std::string function_;

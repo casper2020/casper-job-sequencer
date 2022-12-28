@@ -62,7 +62,7 @@ casper::job::Live::~Live ()
  *
  * @param o_response JSON object.
  */
-void casper::job::Live::Run (const int64_t& a_id, const Json::Value& a_payload,
+void casper::job::Live::Run (const uint64_t& a_id, const Json::Value& a_payload,
                              cc::easy::job::Job::Response& o_response)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);

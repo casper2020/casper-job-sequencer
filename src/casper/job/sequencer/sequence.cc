@@ -35,7 +35,7 @@
  * @param a_origin ORIGIN info, optional.
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
-                                            const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                                            const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid,
                                             const Json::Value& a_origin)
     : source_(a_source), cid_(a_cid), iid_(a_iid), bjid_(a_bjid),
@@ -60,7 +60,7 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
  * @param a_origin ORIGIN info, optional.
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
-                                            const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                                            const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did,
                                             const Json::Value& a_origin)
     : source_(a_source), cid_(a_cid), iid_(a_iid), bjid_(a_bjid),

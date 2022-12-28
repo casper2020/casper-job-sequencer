@@ -1319,7 +1319,7 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
                                 const Json::Value& next = a_value[0];
                                 if ( false == next["id"].isNull() ) {
                                     o_next.Reset(sequencer::Status::Pending, /* a_payload */ next);
-                                    o_next.SetIndex(static_cast<ssize_t>(next["index"].asUInt()));
+                                    o_next.SetIndex(static_cast<size_t>(next["index"].asUInt()));
                                     o_next.SetDID(next["id"].asString());                                    
                                     const auto job = GetJSONObject(o_next.payload(), "job", Json::ValueType::objectValue, /* a_default */ nullptr);
                                     o_next.SetTTR           (GetJSONObject(job, "ttr"     , Json::ValueType::intValue   , &activity_config_.ttr_     ).asUInt());
@@ -1385,7 +1385,7 @@ void casper::job::Sequencer::FinalizeActivity (const casper::job::sequencer::Act
  * @param a_activity Activity info.
  * @param a_response Activity response.
  */
-void casper::job::Sequencer::CancelActivity (const casper::job::sequencer::Activity& a_activity, const Json::Value& a_response)
+void casper::job::Sequencer::CancelActivity (const casper::job::sequencer::Activity& a_activity, const Json::Value& /* a_response */)
 {
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
     
@@ -1620,7 +1620,7 @@ void casper::job::Sequencer::OnJobsSignalReceived (const uint64_t& a_id, const s
             //
             // Process cancellation message.
             //
-            const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(static_cast<int64_t>(a_id), "JOBS SIGNALS MESSAGE RECEIVED");
+            const casper::job::sequencer::Tracking tracking = SEQUENCER_TRACK_CALL(a_id, "JOBS SIGNALS MESSAGE RECEIVED");
         
             try {
                 
@@ -2101,7 +2101,7 @@ void casper::job::Sequencer::ValidateSequenceTimeouts (const sequencer::Tracking
     }
     
     const Json::UInt seq_acts_timeout_sum = ( seq_acts_ttr_sum + seq_acts_validity_sum );
-    const Json::UInt seq_job_timeout_sum  = ( seq_ttr + seq_validity );
+    // TODO: unused ? const Json::UInt seq_job_timeout_sum  = ( seq_ttr + seq_validity );
 
     o_ttr      = seq_acts_ttr_sum;
     o_validity = seq_acts_validity_sum;

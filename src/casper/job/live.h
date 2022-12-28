@@ -45,7 +45,7 @@ namespace casper
             
         public: // Inherited Virtual Method(s) / Function(s) - from ::Sequencer
             
-            virtual void Run   (const int64_t& a_id, const Json::Value& a_payload,
+            virtual void Run   (const uint64_t& a_id, const Json::Value& a_payload,
                                 cc::easy::job::Job::Response& o_response);
 
         }; // end of class 'Live'

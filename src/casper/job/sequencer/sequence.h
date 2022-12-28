@@ -57,7 +57,7 @@ namespace casper
                 Source      source_; //!< One of \link Source \link.
                 uint64_t    cid_ ;   //!< CLUSTER ID.
                 uint64_t    iid_ ;   //!< INSTANCE ID.
-                int64_t     bjid_;   //!< BEANSTALKD job id ( for logging purposes ).
+                uint64_t    bjid_;   //!< BEANSTALKD job id ( for logging purposes ).
                 std::string rsid_;   //!< REDIS service id.
                 uint64_t    rjnr_;   //!< REDIS job number.
                 std::string rjid_;   //!< REDIS job key.
@@ -69,10 +69,10 @@ namespace casper
             public: // Constructor(s) / Destructor
 
                 Sequence () = delete;
-                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                           const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid,
                           const Json::Value& a_origin);
-                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const int64_t& a_bjid,
+                Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                           const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did,
                           const Json::Value& a_origin);
                 Sequence (const Sequence& a_sequence);
@@ -87,7 +87,7 @@ namespace casper
                 const Source&      source () const;
                 const uint64_t&    cid    () const;
                 const uint64_t&    iid    () const;
-                const int64_t&     bjid   () const;
+                const uint64_t&    bjid   () const;
                 const std::string& rsid   () const;
                 const uint64_t&    rjnr   () const;
                 const std::string& rjid   () const;
@@ -150,7 +150,7 @@ namespace casper
             /**
              * @return R/O access to BEANSTALKD job id ( for logging purposes ).
              */
-            inline const int64_t& Sequence::bjid () const
+            inline const uint64_t& Sequence::bjid () const
             {
                 return bjid_;
             }
