@@ -37,6 +37,8 @@
 
 #include "casper/job/sequencer/v8/script.h"
 
+#include "cc/rollbar/v1/api.h"
+
 namespace casper
 {
 
@@ -91,6 +93,8 @@ namespace casper
             
             std::map<std::string, sequencer::Activity*> running_activities_; //!< RCID ( REDIS Channel ID ) -> Activity
             casper::job::sequencer::v8::Script*         script_;
+            
+            ::cc::rollbar::v1::API*                     rollbar_;
 
         public: // Constructor(s) / Destructor
             
