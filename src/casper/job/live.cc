@@ -136,6 +136,12 @@ void casper::job::Live::Run (const uint64_t& a_id, const Json::Value& a_payload,
             origin = Json::Value::null;
         }
         
+        // ... validate 'on_error' object ( if any ) ...
+        const Json::Value& on_error = (*payload)["on_error"];
+        if ( false == on_error.isNull() && false == on_error.isObject() ) {
+            throw sequencer::JSONValidationException(tracking, "'on_error' is not a valid object!");
+        }
+        
         // ... register sequence and grab first activity ...
         try {
 
@@ -151,14 +157,15 @@ void casper::job::Live::Run (const uint64_t& a_id, const Json::Value& a_payload,
                                                                 ? sequencer::Sequence::Source::Jobification
                                                                 : sequencer::Sequence::Source::Default
                                                               ),
-                                               /* a_cid    */  config_.cluster(),
-                                               /* a_iid    */  config_.instance(),
-                                               /* a_bjid   */ tracking.bjid_,
-                                               /* a_rsid   */ config_.service_id(),
-                                               /* a_rjnr   */ rjnr,
-                                               /* a_rjid   */ ( config_.service_id() + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
-                                               /* a_rcid   */ ( config_.service_id() + ':'      + tube_ + ':' + a_payload["id"].asString() ),
-                                               /* a_origin */ origin
+                                               /* a_cid      */  config_.cluster(),
+                                               /* a_iid      */  config_.instance(),
+                                               /* a_bjid     */ tracking.bjid_,
+                                               /* a_rsid     */ config_.service_id(),
+                                               /* a_rjnr     */ rjnr,
+                                               /* a_rjid     */ ( config_.service_id() + ":jobs:" + tube_ + ':' + a_payload["id"].asString() ),
+                                               /* a_rcid     */ ( config_.service_id() + ':'      + tube_ + ':' + a_payload["id"].asString() ),
+                                               /* a_origin   */ origin,
+                                               /* a_on_error */ on_error
             );
             // ... register sequence ...
             auto first_activity = RegisterSequence(*sequence, *payload);

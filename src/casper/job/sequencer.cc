@@ -68,6 +68,7 @@ casper::job::Sequencer::Sequencer (const char* const a_tube, const ev::Loggable:
 {
     script_   = nullptr;
     rollbar_  = nullptr;
+    volatile_ = nullptr;
 }
 
 /**
@@ -83,6 +84,10 @@ casper::job::Sequencer::~Sequencer ()
     // ... forget 'rollbar' ...
     if ( nullptr != rollbar_ ) {
         delete rollbar_;
+    }
+    // ... forget 'volatile' ...
+    if ( nullptr != volatile_ ) {
+        delete volatile_;
     }
     // ... forget running activities ...
     for ( auto it : running_activities_ ) {
@@ -107,6 +112,8 @@ void casper::job::Sequencer::Setup ()
                                                      /* a_owner */ tube_, /* a_name */ config_.log_token(),
                                                      /* a_uri */ "thin air", /* a_out_path */ logs_directory()
     );
+    // ... load it now ...
+    script_->Load(/* a_external_scripts */ Json::Value::null, /* a_expressions */ {});
     const ::cc::easy::JSON<::cc::Exception> json;
     // ... prepare 'rollbar' ...
     const Json::Value& rollbar_ref = json.Get(config_.other(), "rollbar", Json::ValueType::objectValue, &Json::Value::null);
@@ -116,8 +123,9 @@ void casper::job::Sequencer::Setup ()
             rollbar_->Setup(loggable_data_, rollbar_ref);
         }
     }
-    // ... load it now ...
-    script_->Load(/* a_external_scripts */ Json::Value::null, /* a_expressions */ {});
+    // ... prepare 'volatile' ...
+    volatile_ = new ::cc::easy::job::Volatile(beanstalk_config(), loggable_data_);
+    volatile_->Setup();
     //
     // SPECIAL CASE: we're interested in cancellation signals ( since we're running activites in sequence )
     //
@@ -317,7 +325,6 @@ void casper::job::Sequencer::CancelSequence (const casper::job::sequencer::Activ
     );
 }
 
-
 /**
  * @brief Call when the 'final' activity was performed so we close the sequence.
  *
@@ -393,9 +400,11 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
 
     Json::FastWriter ljfw; ljfw.omitEndingLineFeed();
     
+    const std::string response_str = ljfw.write(a_response);
+    
     // ... log sequence 'response' ...
     SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_INF, sequence, CC_JOB_LOG_STEP_OUT, "Response: %s%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                           response_color, ljfw.write(a_response).c_str()
+                           response_color, response_str.c_str()
     );
     
     // ... log sequence 'status' ...
@@ -406,7 +415,7 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
     // ... response ...
     SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_OUT,
                       "Response: %s%s" CC_LOGS_LOGGER_RESET_ATTRS,
-                      response_color, ljfw.write(a_response).c_str()
+                      response_color, response_str.c_str()
     );
         
     
@@ -430,7 +439,10 @@ void casper::job::Sequencer::FinalizeSequence (const casper::job::sequencer::Act
                       "Status: %s" UINT16_FMT " - %s" CC_LOGS_LOGGER_RESET_ATTRS,
                       status_color, status_code, status_name.c_str()
     );
-
+    
+    // ... report ...
+    NotifyOnFailureOrError(a_activity, a_response);
+    
     // ... log job 'status' ..
     SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_INF, sequence.bjid(), CC_JOB_LOG_STEP_STATUS, "%s%s" CC_LOGS_LOGGER_RESET_ATTRS,
                       status_color, job_status.c_str()
@@ -2200,169 +2212,430 @@ void casper::job::Sequencer::ValidateSequenceTimeouts (const sequencer::Tracking
  * @param a_level       LOG level.
  * @param a_step        LOG step.
  * @param a_definitions Warning definitions, JSON object.
+ * @param a_timeout     Calculated sequence timeout.
 */
 void casper::job::Sequencer::LogSequenceAlert (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
                                                const size_t a_level, const char* const a_step, const Json::Value& a_definitions,
                                                const Json::UInt a_timeout)
 {
+    // ... sanity check ...
     CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
-    
-    // ...
+    // ... build notification ...
     Json::Value object = Json::Value(Json::ValueType::objectValue);
-    object["process"]  = Json::Value(Json::ValueType::objectValue);
-    object["process"]["name"]    = CASPER_JOB_SEQUENCER_NAME;
-    object["process"]["version"] = CASPER_JOB_SEQUENCER_VERSION;
-    object["process"]["pid"]     = config_.pid();
-    object["origin"]   = a_sequence.origin();
-    object["cluster"]  = a_sequence.cid();
-    object["instance"] = a_sequence.iid();
-    object["tube"]     = tube_;
-    object["job"]      = a_sequence.rjid();
-    object["jobs"]     = Json::Value(Json::ValueType::arrayValue);
-    // ... collect minimalist info ...
-    for ( Json::ArrayIndex idx = 0 ; idx < a_acts.size() ; ++idx ) {
-        const auto ttr      = GetJSONObject(a_acts[idx], "ttr"     , Json::ValueType::uintValue, &activity_config_.ttr_).asUInt();
-        const auto validity = GetJSONObject(a_acts[idx], "validity", Json::ValueType::uintValue, &activity_config_.validity_).asUInt();
-        const auto tube     = GetJSONObject(a_acts[idx], "tube"    , Json::ValueType::stringValue, nullptr).asString();
-        Json::Value& obj = object["jobs"].append(Json::Value(Json::ValueType::objectValue));
-        obj["tube"]     = tube;
-        obj["ttr"]      = ttr;
-        obj["validity"] = validity;
-        obj["timeout"]  = ttr + validity;
+    if ( false == BuildTimeoutNotification(a_sequence, a_acts, /* a_enforce */ ( a_level <= CC_JOB_LOG_LEVEL_ERR ), a_definitions, a_timeout, nullptr, object) ) {
+        // ... nothing to send ...
+        return;
     }
+    // ... set log severity ...
+    const char* severity;
     switch(a_level) {
         case CC_JOB_LOG_LEVEL_CRT: // CRITICAL
-            object["severity"] = "CRITICAL";
-            object["level"]    = "critical";
+            severity = "CRITICAL";
             break;
         case CC_JOB_LOG_LEVEL_ERR: // ERROR
-            object["severity"] = "ERROR";
-            object["level"]    = "error";
+            severity = "ERROR";
             break;
         case CC_JOB_LOG_LEVEL_WRN: // WARNING
-            object["severity"] = "WARNING";
-            object["level"]    = "warning";
+            severity = "WARNING";
             break;
         case CC_JOB_LOG_LEVEL_INF: // INFO
-            object["severity"] = "INFO";
-            object["level"]    = "info";
+            severity = "INFO";
             break;
         case CC_JOB_LOG_LEVEL_VBS: // VERBOSE
-            object["severity"] = "VERBOSE";
-            object["level"]    = "debug";
+            severity = "VERBOSE";
             break;
         case CC_JOB_LOG_LEVEL_DBG: // DEBUG
-            object["severity"] = "DEBUG";
-            object["level"]    = "debug";
+            severity = "DEBUG";
             break;
         case CC_JOB_LOG_LEVEL_PRN: // PARANOID
-            object["severity"] = "PARANOID";
-            object["level"]    = "debug";
+            severity = "PARANOID";
             break;
         default:
-            object["severity"] = "UNKNOWN";
-            object["level"]    = "error";
+            severity = "UNKNOWN";
             break;
     }
-    // ...
-    object["title"]   = "( $.suspect + ': excessive timeouts!' )";
-    object["suspect"] = "( 0 == $.jobs.length ? '' : 1 == $.jobs.length ? $.jobs[0].tube : $.jobs[0].tube + ' and associates' )";
-    object["message"] = "$.job + ' contains a sequence with timeout value above ' + $.timeout.above + ' second(s)'";
-    // ...
-    object["timeout"]          = a_definitions;
-    object["timeout"]["value"] = a_timeout;
-    // ...
-    object["timeout"]["enforce"] = ( a_level <= CC_JOB_LOG_LEVEL_ERR );
-    // ...
-    if ( true == object["timeout"]["enforce"].asBool() ) {
-        object["tubes"]    = "JSON.stringify(JSON.parse(JSON.stringify($.jobs)))";
-        object["notice"]   = "$.suspect + ': this sequence timeout value, ' + $.timeout.value + ' second(s), must be below ' + $.timeout.above + ' second(s).'";
-        object["enforced"] = false;
-    } else {
-        object["tubes"]    = "JSON.stringify(JSON.parse(JSON.stringify($.jobs)))";
-        object["notice"]   = "$.suspect + ': this sequence timeout value, ' + $.timeout.value + ' second(s), should be below ' + $.timeout.above + ' second(s).'";
-        object["enforced"] = false;
-    }
-    // ...
+    // ... send ...
+    (void)SendExternalWarningNotification(a_sequence, object);
+    // ... log ...
     Json::FastWriter fw; fw.omitEndingLineFeed();
-    ::v8::Persistent<::v8::Value> data;
-    ::cc::v8::Value               value;
-    // ... V8 it, expression from config !
-    script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
-                     /* a_data   */ fw.write(object).c_str(),
-                     /* o_object */ nullptr,
-                     /* o_value  */ &data,
-                     /* a_key    */ nullptr
+    SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, "%s! - %s ",
+                           fw.write(object["title"]).c_str(), fw.write(object["message"]).c_str()
     );
-    // ...
-    const auto translate = [] (const ::cc::v8::Value& a_value, Json::Value& o_value) {
-        switch(a_value.type()) {
-            case ::cc::v8::Value::Type::Int32:
-                o_value = Json::Value(a_value.operator int());
-                break;
-            case ::cc::v8::Value::Type::UInt32:
-                o_value = Json::Value(a_value.operator unsigned int());
-                break;
-            case ::cc::v8::Value::Type::Double:
-                o_value = Json::Value(a_value.operator double());
-                break;
-            case ::cc::v8::Value::Type::String:
-                o_value = Json::Value(a_value.AsString());
-                break;
-            case ::cc::v8::Value::Type::Boolean:
-                o_value = Json::Value(a_value.operator const bool());
-                break;
-            case ::cc::v8::Value::Type::Object:
-                o_value = a_value.operator const Json::Value &();
-            case ::cc::v8::Value::Type::Date:
-            case ::cc::v8::Value::Type::Undefined:
-            case ::cc::v8::Value::Type::Null:
-                o_value = Json::Value(Json::Value::null);
-                break;
-        }
-    };
-    // ...
-    const std::vector<std::string> other_fields = { "suspect", "tubes", "title", "notice", "message" };
-    for ( const auto& member : other_fields ) {
-        object[member] = GetJSONObject(object, member.c_str(), Json::ValueType::stringValue , /* a_default */ &Json::Value::null);
-        script_->Evaluate(data, object[member].asString(), value);
-        translate(value, object[member]);
-        script_->SetData(/* a_name  */ ( a_sequence.rjid() + "-v8-data" ).c_str(),
-                         /* a_data   */ fw.write(object).c_str(),
-                         /* o_object */ nullptr,
-                         /* o_value  */ &data,
-                         /* a_key    */ nullptr
-         );
+}
+
+// MARK: -
+
+/**
+ * @brief Call when an error occurred while executing an 'activity' and the sequency is being finalized.
+ *
+ * @param a_activity Activity info
+ * @param a_response Activity response.
+ */
+void casper::job::Sequencer::NotifyOnFailureOrError (const sequencer::Activity& a_activity, const Json::Value& a_response)
+{
+    // ... sanity check ...
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... if not an error ...
+    if ( not ( sequencer::Status::Failed == a_activity.status() || sequencer::Status::Error == a_activity.status() ) ) {
+        // ... nothing to do here ...
+        return;
     }
-    //... rollbar?
-    if ( nullptr != rollbar_ ) {
-        // ...
-        Json::Value custom = Json::Value(Json::ValueType::objectValue);
-        custom["origin"]   = a_sequence.origin();
-        custom["cluster"]  = a_sequence.cid();
-        custom["instance"] = a_sequence.iid();
+    // ... notify ...
+    if ( true == a_activity.sequence().on_error().isObject() ) {
+        // ... via custom job ...
+        try {
+            const auto& job      = GetJSONObject(a_activity.sequence().on_error(), "job" , Json::ValueType::objectValue, /* a_default */ nullptr);
+            const auto  tube     = GetJSONObject(job                             , "tube", Json::ValueType::stringValue, /* a_default */ nullptr).asString();
+            const auto& ttr      = GetJSONObject(job                             , "ttr"     , Json::ValueType::uintValue  , &activity_config_.ttr_).asUInt();
+            const auto& validity = GetJSONObject(job                             , "validity", Json::ValueType::uintValue  , &activity_config_.validity_).asUInt();
+            ::cc::easy::job::Volatile::Job j = {
+                /* service_id_ */ config_.service_id(),
+                /* tube_       */ tube,
+                /* payload_    */ GetJSONObject(job, "payload", Json::ValueType::objectValue, /* a_default */ nullptr),
+                /* ttr_        */ static_cast<uint32_t>(ttr),
+                /* ttr_        */ static_cast<uint32_t>(validity),
+                /* expires_in_ */ static_cast<int64_t>(ttr + validity),
+            };
+            ::cc::easy::job::Volatile::Result jr {
+                /* id_         */   0,
+                /* key_        */  "",
+                /* channel_    */  "",
+                /* sc_         */ 400,
+                /* ew_         */  ""
+            };
+            // ... submit ...
+            {
+                // ... on main thread ...
+                osal::ConditionVariable cv;
+                ExecuteOnMainThread([this, &j, &jr, &cv] {
+                    // ... send ...
+                    try {
+                        // ... try ...
+                        (void)
+                        volatile_->Submit(j, jr, cv);
+                    } catch (...) {
+                        // ...
+                    }
+                }, /* a_blocking */ false);
+                cv.Wait();
+            }
+            // ... log ...
+            if ( 200 == jr.sc_ ) {
+                SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence().bjid(), CC_JOB_LOG_STEP_OUT, "On Error: submited job to %s:" UINT64_FMT,
+                                  j.tube_.c_str(), jr.id_
+                );
+            } else {
+                SEQUENCER_LOG_JOB(CC_JOB_LOG_LEVEL_ERR, a_activity.sequence().bjid(), CC_JOB_LOG_STEP_OUT, "On Error: FAILED to submit job to %s: %s",
+                                  j.tube_.c_str(), jr.ew_.c_str()
+                );
+            }
+        } catch (...) {
+            // ... via external notification system ...
+            SendExternalErrorNotification(a_activity, a_response);
+        }
+    } else {
+        // ... via external notification system ...
+        SendExternalErrorNotification(a_activity, a_response);
+    }
+    
+}
+
+/**
+ * @brief Build an 'failure' or 'error' notification.
+ *
+ * @param a_sequence    Sequence info.
+ * @param a_acts        Sequence 'jobs' payload.
+ * @param a_enforces    True if timeout will enforce an error.
+ * @param a_definitions Warning definitions, JSON object.
+ * @param a_timeout     Calculated sequence timeout.
+ *
+ * @param a_callback Payload customization callback, nullptr if none.
+ *
+ * @param o_value    JSON object with notification data.
+ *
+ * @return True if we have some data to send, false otherwise.
+ */
+bool casper::job::Sequencer::BuildTimeoutNotification (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
+                                                       const bool a_enforced, const Json::Value& a_definitions, const Json::UInt a_timeout,
+                                                       const std::function<void(Json::Value&)>& a_callback,
+                                                       Json::Value& o_value)
+{
+    // ... sanity check ...
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... reset ...
+    o_value.clear();
+    // ... build notification ...
+    o_value = Json::Value(Json::ValueType::objectValue);
+    // ... set level ..
+    o_value["level"]  = ( a_enforced ? "error" : "warning" );
+    // ...
+    o_value["tube"]  = tube_;
+    o_value["tubes"] = Json::Value(Json::ValueType::objectValue);
+    // ... collect minimalist info ...
+    for ( Json::ArrayIndex idx = 0 ; idx < a_acts.size() ; ++idx ) {
+        const auto t = GetJSONObject(a_acts[idx], "tube", Json::ValueType::stringValue, nullptr).asString();
+        o_value["tubes"][t]["ttr"]      = GetJSONObject(a_acts[idx], "ttr"     , Json::ValueType::uintValue, &activity_config_.ttr_).asUInt();
+        o_value["tubes"][t]["validity"] = GetJSONObject(a_acts[idx], "validity", Json::ValueType::uintValue, &activity_config_.validity_).asUInt();
+        o_value["tubes"][t]["timeout"]  = o_value["tubes"][t]["ttr"].asUInt() + o_value["tubes"][t]["validity"].asUInt();
+    }
+    // ...
+    if ( 0 == a_acts.size() ) {
+        o_value["suspect"] = "";
+    } else if ( 1 == a_acts.size() ) {
+        o_value["suspect"] = a_acts[0]["tube"].asString();
+    } else {
+        o_value["suspect"] = a_acts[0]["tube"].asString() + " and company";
+    }
+    // ...
+    o_value["title"] = o_value["suspect"].asString() + " ~ excessive timeouts!'";
+    // ...
+    o_value["timeout"]             = a_definitions;
+    o_value["timeout"]["value"]    = a_timeout;
+    o_value["timeout"]["enforced"] = a_enforced;
+    // ...
+    o_value["message"] = o_value["suspect"].asString() + ": this sequence timeout value, " + o_value["timeout"]["value"].asString() + " second(s)";
+    if ( true == a_enforced ) {
+        o_value["message"] =  o_value["message"].asString() + ", must";
+    } else {
+        o_value["message"] = o_value["message"].asString() + ", should";
+    }
+    o_value["message"] = o_value["message"].asString() + " be below " + o_value["timeout"]["above"].asString() + " second(s).";
+    // ... adjust title ...
+    o_value["title"] = config_.service_id() + " - " + o_value["title"].asString();
+    // ... custom data ...
+    {
+        o_value["custom"]["origin"]    = a_sequence.origin();
+        o_value["custom"]["cluster"]   = a_sequence.cid();
+        o_value["custom"]["instance"]  = a_sequence.iid();
+        o_value["custom"]["timestamp"] = ::cc::UTCTime::Now();
+        o_value["custom"]["when"]      = ::cc::UTCTime::NowISO8601WithTZ();
         {
             char hostname[255]; hostname[254] = '\0';
             if ( 0 == gethostname(hostname, 254) ) {
-                custom["hostname"] = hostname;
+                o_value["custom"]["hostname"] = hostname;
             }
         }
-        custom["tubes"]    = object["tubes"];
-        custom["notice"]   = object["notice"];
-        custom["enforced"] = object["enforced"];
-        // ... send ...
+        o_value["custom"]["tubes"]    = o_value["tubes"];
+        o_value["custom"]["enforced"] = a_enforced;
+    }
+    // ... give a chance for custom fields ...
+    if ( nullptr != a_callback ) {
+        a_callback(o_value);
+    }
+    // ... done ...
+    return true;
+}
+
+/**
+ * @brief Build an 'failure' or 'error' notification.
+ *
+ * @param a_activity Running activity info.
+ * @param a_response Activity response.
+ * @param a_callback Payload customization callback, nullptr if none.
+ *
+ * @param o_value    JSON object with notification data.
+ *
+ * @return True if an activity failed to run and we have some data to send, false otherwise.
+ */
+bool casper::job::Sequencer::BuildFailureOrErrorNotification (const sequencer::Activity& a_activity, const Json::Value& a_response,
+                                                              const std::function<void(Json::Value&)>& a_callback,
+                                                              Json::Value& o_value)
+{
+    // ... sanity check ...
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... reset ...
+    o_value.clear();
+    // ... if not an error ...
+    if ( not ( sequencer::Status::Failed == a_activity.status() || sequencer::Status::Error == a_activity.status() ) ) {
+        // ... nothing to do here ...
+        return false;
+    }
+    // ... build notification ...
+    o_value = Json::Value(Json::ValueType::objectValue);
+    switch (a_activity.status()) {
+        case sequencer::Status::Error:
+        {
+            try {
+                o_value["status"]["code"] = GetJSONObject(a_response, "status_code", Json::ValueType::uintValue, &Json::Value::null).asUInt();
+                const auto it = ::cc::i18n::Singleton::k_http_status_codes_map_.find(static_cast<uint16_t>(o_value["status"]["code"].asUInt()));
+                if ( ::cc::i18n::Singleton::k_http_status_codes_map_.end() != it ) {
+                    o_value["status"]["name"] = it->second;
+                } else {
+                    o_value["status"]["name"] = "???";
+                }
+            } catch (...) {
+                o_value["status"]["code"] = 500;
+                o_value["status"]["name"] = "<undefined>";
+            }
+        }
+            break;
+        case sequencer::Status::Failed:
+            o_value["status"]["code"] = 500;
+            o_value["status"]["name"] = "<failure>";
+            break;
+        default:
+            // ... unreachable ...
+            return false;
+    }
+    // ... set level ..
+    o_value["level"]  = "error";
+    // ... custom data ...
+    {
+        o_value["custom"]["origin"]    = a_activity.sequence().origin();
+        o_value["custom"]["cluster"]   = a_activity.sequence().cid();
+        o_value["custom"]["instance"]  = a_activity.sequence().iid();
+        o_value["custom"]["timestamp"] = ::cc::UTCTime::Now();
+        o_value["custom"]["when"]      = ::cc::UTCTime::NowISO8601WithTZ();
+        {
+            char hostname[255]; hostname[254] = '\0';
+            if ( 0 == gethostname(hostname, 254) ) {
+                o_value["custom"]["hostname"] = hostname;
+            }
+        }
+        o_value["custom"]["sequence"]["id"]            = a_activity.sequence().rjnr();
+        o_value["custom"]["sequence"]["tube"]          = tube_;
+        o_value["custom"]["failed"]["job"]["id"]       = std::to_string(a_activity.rjnr());
+        o_value["custom"]["failed"]["job"]["tube"]     = a_activity.rcnm();
+        o_value["custom"]["failed"]["job"]["response"] = a_response;
+    }
+    // ... give a chance for custom fields ...
+    if ( nullptr != a_callback ) {
+        a_callback(o_value);
+    }
+    // <service_id> - <tube> ~ <status_code> - <status_name>
+    if ( false == o_value.isMember("title") ) {
+        o_value["title"] = config_.service_id() + " - " + a_activity.rcnm() + " ~ " + std::to_string(o_value["status"]["code"].asUInt()) + " - " + o_value["status"]["name"].asString();
+    }
+    // <tube>:<rjnr> : <status_code> - <status_name> ~ <tube>:<rjnr>, sequence # <rjnr> @ cluster # <cluster_number>
+    if ( false == o_value.isMember("message") ) {
+        o_value["message"] =  a_activity.rcnm() + ':' + std::to_string(a_activity.rjnr()) + " ~ " +  std::to_string(o_value["status"]["code"].asUInt()) + " - " + o_value["status"]["name"].asString() + " ~ " + tube_ + ":" + std::to_string(a_activity.sequence().rjnr()) + " @ cluster #" +std::to_string(a_activity.sequence().cid());
+    }
+    // ... done ...
+    return true;
+}
+
+/**
+ * @brief Send an 'external' warning notification ( if enabled ) for a failed sequence.
+ *
+ * @param a_sequence Sequence info.
+ * @param a_object   JSON object with notification data.
+ */
+void casper::job::Sequencer::SendExternalWarningNotification (const sequencer::Sequence& a_sequence,
+                                                              const Json::Value& a_object)
+{
+    // ... sanity check ...
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... disabled?
+    if ( nullptr == rollbar_ || false == rollbar_->IsEnabled(::cc::rollbar::v1::API::Level::Warning) ) {
+        // ... nothing to do here ...
+        return;
+    }
+    try {
+        // ... schedule ...
+        ExecuteOnMainThread([this, &a_object] {
+            // ... send ...
+            try {
+                // ... try ...
+                rollbar_->Create(::cc::rollbar::v1::API::Level::Warning,
+                                 ( "[ " + rollbar_->project() + " ] " + a_object["title"].asString() ), a_object["message"].asString(), a_object["custom"]
+                );
+            } catch (...) {
+                // ...
+            }
+        }, /* a_blocking */ true);
+    } catch (const ::cc::Exception& a_cc_exception) {
+        // ... log ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' to 'rollbar': %s",
+                               a_cc_exception.what()
+        );
+    } catch (...) {
+        // ... log ...
         try {
-            ExecuteOnMainThread([this, &object, &custom] {
-                rollbar_->Create(object["level"].asString(), object["title"].asString() , object["message"].asString(), custom);
-            }, /* a_blocking */ true);
+            CC_EXCEPTION_RETHROW(/* a_unhandled */ false);
         } catch (const ::cc::Exception& a_cc_exception) {
-            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_DUMP, "Failed to send a 'rollbar':%s",
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' to 'rollbar': %s",
                                    a_cc_exception.what()
             );
         }
     }
-    // ... log ...
-    SEQUENCER_LOG_SEQUENCE(a_level, a_sequence, a_step, "%s! ( %s ) - %s ",
-                           fw.write(object["message"]).c_str(), fw.write(object["tubes"]).c_str(), fw.write(object["notice"]).c_str()
-    );
+}
+
+/**
+ * @brief Send an 'external' error notification ( if enabled ) for a failed sequence.
+ *
+ * @param a_activity Running activity info.
+ * @param a_response Activity response.
+ * @param a_callback Payload customization callback, nullptr if none.
+ */
+void casper::job::Sequencer::SendExternalErrorNotification (const sequencer::Activity& a_activity, const Json::Value& a_response,
+                                                            const std::function<void(Json::Value&)>& a_callback)
+{
+    // ... sanity check ...
+    CC_DEBUG_FAIL_IF_NOT_AT_THREAD(thread_id_);
+    // ... if not an error ...
+    if ( not ( sequencer::Status::Failed == a_activity.status() || sequencer::Status::Error == a_activity.status() ) ) {
+        // ... nothing to do here ...
+        return;
+    }
+    // ... and error occured ...
+    ::cc::rollbar::v1::API::Level level = ::cc::rollbar::v1::API::Level::None;
+    switch (a_activity.status()) {
+        case sequencer::Status::Error:
+        case sequencer::Status::Failed:
+            level = ::cc::rollbar::v1::API::Level::Error;
+            break;
+        default:
+            // ... unreachable, but ...
+            return;
+    }
+    // ... disabled?
+    if ( nullptr == rollbar_ || ::cc::rollbar::v1::API::Level::None == level || false == rollbar_->IsEnabled(level) ) {
+        // ... nothing to do here ...
+        return;
+    }
+    // ... send ...
+    Json::Value* object; // ... since we cannot trust activity responses payload size ...
+    try {
+        // ... prepare content ...
+        object = new Json::Value(Json::ValueType::objectValue);
+        if ( false == BuildFailureOrErrorNotification(a_activity, a_response, a_callback, *object) ) {
+            // ... clean up ...
+            delete object;
+            // ... nothing to do here ...
+            return;
+        }
+        // ... schedule ...
+        ExecuteOnMainThread([this, &object] {
+            // ... send ...
+            try {
+                // ... try ...
+                rollbar_->Create(::cc::rollbar::v1::API::Level::Error,
+                                 ( "[ " + rollbar_->project() + " ] " + (*object)["title"].asString() ), (*object)["message"].asString(), (*object)["custom"]
+                );
+                // ... clean up ...
+                delete object;
+            } catch (...) {
+                // ... clean up ...
+                delete object;
+            }
+        }, /* a_blocking */ true);
+    } catch (const ::cc::Exception& a_cc_exception) {
+        // ... clean up ...
+        delete object;
+        // ... log ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' to 'rollbar': %s",
+                               a_cc_exception.what()
+        );
+    } catch (...) {
+        // ... clean up ...
+        delete object;
+        // ... log ...
+        try {
+            CC_EXCEPTION_RETHROW(/* a_unhandled */ false);
+        } catch (const ::cc::Exception& a_cc_exception) {
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' to 'rollbar': %s",
+                                   a_cc_exception.what()
+            );
+        }
+    }
 }

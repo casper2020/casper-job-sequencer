@@ -54,27 +54,28 @@ namespace casper
                 
             private: // Data
                 
-                Source      source_; //!< One of \link Source \link.
-                uint64_t    cid_ ;   //!< CLUSTER ID.
-                uint64_t    iid_ ;   //!< INSTANCE ID.
-                uint64_t    bjid_;   //!< BEANSTALKD job id ( for logging purposes ).
-                std::string rsid_;   //!< REDIS service id.
-                uint64_t    rjnr_;   //!< REDIS job number.
-                std::string rjid_;   //!< REDIS job key.
-                std::string rcid_;   //!< REDIS job channel.
-                std::string did_ ;   //!< DB id ( form table js.sequences[id] as string ).
-                size_t      count_;  //!< NUMBER of activites related to this sequence.
-                Json::Value origin_; //!< Origin info, if available.
+                Source      source_;    //!< One of \link Source \link.
+                uint64_t    cid_ ;      //!< CLUSTER ID.
+                uint64_t    iid_ ;      //!< INSTANCE ID.
+                uint64_t    bjid_;      //!< BEANSTALKD job id ( for logging purposes ).
+                std::string rsid_;      //!< REDIS service id.
+                uint64_t    rjnr_;      //!< REDIS job number.
+                std::string rjid_;      //!< REDIS job key.
+                std::string rcid_;      //!< REDIS job channel.
+                std::string did_ ;      //!< DB id ( form table js.sequences[id] as string ).
+                size_t      count_;     //!< NUMBER of activites related to this sequence.
+                Json::Value origin_;    //!< Origin info, if available.
+                Json::Value on_error_;  //!< JSON object with 'on_error' config.
 
             public: // Constructor(s) / Destructor
 
                 Sequence () = delete;
                 Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                           const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid,
-                          const Json::Value& a_origin);
+                          const Json::Value& a_origin, const Json::Value& a_on_error);
                 Sequence (const Source& a_source, const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                           const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did,
-                          const Json::Value& a_origin);
+                          const Json::Value& a_origin, const Json::Value& a_on_error);
                 Sequence (const Sequence& a_sequence);
                 virtual ~Sequence();
                 
@@ -84,17 +85,18 @@ namespace casper
                 
             public:
                 
-                const Source&      source () const;
-                const uint64_t&    cid    () const;
-                const uint64_t&    iid    () const;
-                const uint64_t&    bjid   () const;
-                const std::string& rsid   () const;
-                const uint64_t&    rjnr   () const;
-                const std::string& rjid   () const;
-                const std::string& rcid   () const;
-                const std::string& did    () const;
-                const size_t&      count  () const;
-                const Json::Value& origin () const;
+                const Source&      source   () const;
+                const uint64_t&    cid      () const;
+                const uint64_t&    iid      () const;
+                const uint64_t&    bjid     () const;
+                const std::string& rsid     () const;
+                const uint64_t&    rjnr     () const;
+                const std::string& rjid     () const;
+                const std::string& rcid     () const;
+                const std::string& did      () const;
+                const size_t&      count    () const;
+                const Json::Value& origin   () const;
+                const Json::Value& on_error () const;
                 
                 void               Bind    (const std::string& a_id, const size_t& a_count);
 
@@ -109,17 +111,18 @@ namespace casper
              */
             inline Sequence& Sequence::operator = (const Sequence& a_sequence)
             {
-                source_ = a_sequence.source_;
-                cid_    = a_sequence.cid_;
-                iid_    = a_sequence.iid_;
-                bjid_   = a_sequence.bjid_;
-                rsid_   = a_sequence.rsid_;
-                rjnr_   = a_sequence.rjnr_;
-                rjid_   = a_sequence.rjid_;
-                rcid_   = a_sequence.rcid_;
-                did_    = a_sequence.did_;
-                count_  = a_sequence.count_;
-                origin_ = a_sequence.origin_;
+                source_   = a_sequence.source_;
+                cid_      = a_sequence.cid_;
+                iid_      = a_sequence.iid_;
+                bjid_     = a_sequence.bjid_;
+                rsid_     = a_sequence.rsid_;
+                rjnr_     = a_sequence.rjnr_;
+                rjid_     = a_sequence.rjid_;
+                rcid_     = a_sequence.rcid_;
+                did_      = a_sequence.did_;
+                count_    = a_sequence.count_;
+                origin_   = a_sequence.origin_;
+                on_error_ = a_sequence.on_error_;
                 return *this;
             }
         
@@ -209,6 +212,14 @@ namespace casper
             inline const Json::Value& Sequence::origin() const
             {
                 return origin_;
+            }
+            
+            /**
+             * @return R/O access to 'on_error' info, optional.
+             */
+            inline const Json::Value& Sequence::on_error() const
+            {
+                return on_error_;
             }
         
             /**

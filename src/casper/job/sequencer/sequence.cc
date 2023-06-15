@@ -24,23 +24,24 @@
 /**
  * @brief Default constructor.
  *
- * @param a_source One of \link Sequence::Source \link.
- * @param a_cid    CLUSTER id.
- * @param a_iid    INSTANCE id.
- * @param a_bjid   BEANSTALKD job id ( for logging purposes ).
- * @param a_rsid   REDIS service id.
- * @param a_rjnr   REDIS job number.
- * @param a_rjid   REDIS job key.
- * @param a_rcid   REDIS job channel.
- * @param a_origin ORIGIN info, optional.
+ * @param a_source   One of \link Sequence::Source \link.
+ * @param a_cid      CLUSTER id.
+ * @param a_iid      INSTANCE id.
+ * @param a_bjid     BEANSTALKD job id ( for logging purposes ).
+ * @param a_rsid     REDIS service id.
+ * @param a_rjnr     REDIS job number.
+ * @param a_rjid     REDIS job key.
+ * @param a_rcid     REDIS job channel.
+ * @param a_origin   ORIGIN info, optional.
+ * @param a_on_error ON_ERROR info, optional.
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
                                             const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid,
-                                            const Json::Value& a_origin)
+                                            const Json::Value& a_origin, const Json::Value& a_on_error)
     : source_(a_source), cid_(a_cid), iid_(a_iid), bjid_(a_bjid),
       rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rjid), rcid_(a_rcid), count_(0),
-      origin_(a_origin)
+      origin_(a_origin), on_error_(a_on_error)
 {
     /* empty */
 }
@@ -48,24 +49,25 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
 /**
  * @brief Default constructor.
  *
- * @param a_source One of \link Sequence::Source \link.
- * @param a_cid    CLUSTER id.
- * @param a_iid    INSTANCE id.
- * @param a_bjid   BEANSTALKD job id ( for logging purposes ).
- * @param a_rsid   REDIS service id.
- * @param a_rjnr   REDIS job number.
- * @param a_rjid   REDIS job key.
- * @param a_rcid   REDIS job channel.
- * @param a_djid   DB id ( form table js.sequences[id] as string ).
- * @param a_origin ORIGIN info, optional.
+ * @param a_source   One of \link Sequence::Source \link.
+ * @param a_cid      CLUSTER id.
+ * @param a_iid      INSTANCE id.
+ * @param a_bjid     BEANSTALKD job id ( for logging purposes ).
+ * @param a_rsid     REDIS service id.
+ * @param a_rjnr     REDIS job number.
+ * @param a_rjid     REDIS job key.
+ * @param a_rcid     REDIS job channel.
+ * @param a_djid     DB id ( form table js.sequences[id] as string ).
+ * @param a_origin   ORIGIN info, optional.
+ * @param a_on_error ON_ERROR info, optional.
  */
 casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
                                             const uint64_t& a_cid, const uint64_t& a_iid, const uint64_t& a_bjid,
                                             const std::string& a_rsid, const uint64_t& a_rjnr, const std::string& a_rjid, const std::string& a_rcid, const std::string& a_did,
-                                            const Json::Value& a_origin)
+                                            const Json::Value& a_origin, const Json::Value& a_on_error)
     : source_(a_source), cid_(a_cid), iid_(a_iid), bjid_(a_bjid),
       rsid_(a_rsid), rjnr_(a_rjnr), rjid_(a_rjid), rcid_(a_rcid), did_(a_did), count_(0),
-      origin_(a_origin)
+      origin_(a_origin), on_error_(a_on_error)
 {
     /* empty */
 }
@@ -77,17 +79,18 @@ casper::job::sequencer::Sequence::Sequence (const Sequence::Source& a_source,
  */
 casper::job::sequencer::Sequence::Sequence (const casper::job::sequencer::Sequence& a_sequence)
 {
-    source_ = a_sequence.source_;
-    cid_    = a_sequence.cid_;
-    iid_    = a_sequence.iid_;
-    bjid_   = a_sequence.bjid_;
-    rsid_   = a_sequence.rsid_;
-    rjnr_   = a_sequence.rjnr_;
-    rjid_   = a_sequence.rjid_;
-    rcid_   = a_sequence.rcid_;
-    did_    = a_sequence.did_;
-    count_  = a_sequence.count_;
-    origin_ = a_sequence.origin_;
+    source_  = a_sequence.source_;
+    cid_     = a_sequence.cid_;
+    iid_     = a_sequence.iid_;
+    bjid_    = a_sequence.bjid_;
+    rsid_    = a_sequence.rsid_;
+    rjnr_    = a_sequence.rjnr_;
+    rjid_    = a_sequence.rjid_;
+    rcid_    = a_sequence.rcid_;
+    did_     = a_sequence.did_;
+    count_   = a_sequence.count_;
+    origin_  = a_sequence.origin_;
+    on_error_ = a_sequence.on_error_;
 }
 /**
  * @brief Destructor.

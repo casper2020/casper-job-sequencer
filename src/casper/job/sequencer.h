@@ -39,6 +39,8 @@
 
 #include "cc/rollbar/v1/api.h"
 
+#include "cc/easy/job/volatile.h"
+
 namespace casper
 {
 
@@ -95,6 +97,7 @@ namespace casper
             casper::job::sequencer::v8::Script*         script_;
             
             ::cc::rollbar::v1::API*                     rollbar_;
+            ::cc::easy::job::Volatile*                  volatile_;
 
         public: // Constructor(s) / Destructor
             
@@ -186,6 +189,22 @@ namespace casper
             void LogSequenceAlert         (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
                                            const size_t a_level, const char* const a_step, const Json::Value& a_definitions,
                                            const Json::UInt a_timeout);
+            
+            //
+            // 3rd party services
+            //
+            void NotifyOnFailureOrError           (const sequencer::Activity& a_activity, const Json::Value& a_response);
+            
+            bool BuildTimeoutNotification         (const sequencer::Sequence& a_sequence, const Json::Value& a_acts,
+                                                   const bool a_enforced, const Json::Value& a_definitions, const Json::UInt a_timeout,
+                                                   const std::function<void(Json::Value&)>& a_callback,
+                                                   Json::Value& o_value);
+            bool BuildFailureOrErrorNotification (const sequencer::Activity& a_activity, const Json::Value& a_response,
+                                                  const std::function<void(Json::Value&)>& a_callback,
+                                                  Json::Value& o_value);
+            void SendExternalWarningNotification (const sequencer::Sequence& a_sequence, const Json::Value& a_object);
+            void SendExternalErrorNotification   (const sequencer::Activity& a_activity, const Json::Value& a_response,
+                                                  const std::function<void(Json::Value&)>& a_callback = nullptr);
 
         protected: // Inline Method(s) // Function(s)
             
