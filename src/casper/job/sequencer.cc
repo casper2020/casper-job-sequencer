@@ -2543,9 +2543,11 @@ void casper::job::Sequencer::SendExternalWarningNotification (const sequencer::S
                 // ...
             }
         }, /* a_blocking */ true);
+        // ... log ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: sent a '%s' notification to 'rollbar' - or attempted to...", "warning");
     } catch (const ::cc::Exception& a_cc_exception) {
         // ... log ...
-        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' to 'rollbar': %s",
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' notification to 'rollbar': %s",
                                a_cc_exception.what()
         );
     } catch (...) {
@@ -2553,7 +2555,7 @@ void casper::job::Sequencer::SendExternalWarningNotification (const sequencer::S
         try {
             CC_EXCEPTION_RETHROW(/* a_unhandled */ false);
         } catch (const ::cc::Exception& a_cc_exception) {
-            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' to 'rollbar': %s",
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_sequence, CC_JOB_LOG_STEP_OUT, "On Error: failed to send a 'warning' notification to 'rollbar': %s",
                                    a_cc_exception.what()
             );
         }
@@ -2619,11 +2621,13 @@ void casper::job::Sequencer::SendExternalErrorNotification (const sequencer::Act
                 delete object;
             }
         }, /* a_blocking */ true);
+        // ... log ...
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: sent a '%s' notification to 'rollbar' - or attempted to...", "error");
     } catch (const ::cc::Exception& a_cc_exception) {
         // ... clean up ...
         delete object;
         // ... log ...
-        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' to 'rollbar': %s",
+        SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' notification to 'rollbar': %s",
                                a_cc_exception.what()
         );
     } catch (...) {
@@ -2633,7 +2637,7 @@ void casper::job::Sequencer::SendExternalErrorNotification (const sequencer::Act
         try {
             CC_EXCEPTION_RETHROW(/* a_unhandled */ false);
         } catch (const ::cc::Exception& a_cc_exception) {
-            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' to 'rollbar': %s",
+            SEQUENCER_LOG_SEQUENCE(CC_JOB_LOG_LEVEL_WRN, a_activity.sequence(), CC_JOB_LOG_STEP_OUT, "On Error: failed to send an 'error' notification to 'rollbar': %s",
                                    a_cc_exception.what()
             );
         }
